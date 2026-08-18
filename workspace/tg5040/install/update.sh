@@ -52,3 +52,7 @@ if [ -d $BRICK_PATH ]; then
 	fi
 fi
 # --------------------------------------
+if [ -f "${SDCARD_PATH}/.system/tg5040/bin/show2.elf" ]; then
+	mkdir -p "${SDCARD_PATH}/.tmp_update/tg5040"
+	cp "${SDCARD_PATH}/.system/tg5040/bin/show2.elf" "${SDCARD_PATH}/.tmp_update/tg5040/show2.elf" 2>/dev/null || true
+fi

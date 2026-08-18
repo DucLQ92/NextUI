@@ -169,15 +169,32 @@ public:
         if (TTF_Init() < 0) {
             std::cerr << "TTF_Init failed: " << TTF_GetError() << std::endl;
         } else {
-            SDL_RWops* rw = SDL_RWFromConstMem(RoundedMplus1c_Bold_reduced_ttf,
-                                                RoundedMplus1c_Bold_reduced_ttf_len);
-            if (rw) {
-                font = TTF_OpenFontRW(rw, 1, config.font_size);
-                if (!font) {
-                    std::cerr << "Failed to load embedded font: " << TTF_GetError() << std::endl;
+            const char* external_fonts[] = {
+                "/mnt/SDCARD/.system/res/font2.ttf",
+                "/mnt/SDCARD/.system/res/font1.ttf",
+                "/mnt/SDCARD/res/font2.ttf",
+                "res/font2.ttf",
+                "font2.ttf",
+                nullptr
+            };
+            for (int i = 0; external_fonts[i]; ++i) {
+                if (access(external_fonts[i], R_OK) == 0) {
+                    font = TTF_OpenFont(external_fonts[i], config.font_size);
+                    if (font) break;
                 }
-            } else {
-                std::cerr << "Failed to create RWops for embedded font" << std::endl;
+            }
+
+            if (!font) {
+                SDL_RWops* rw = SDL_RWFromConstMem(RoundedMplus1c_Bold_reduced_ttf,
+                                                    RoundedMplus1c_Bold_reduced_ttf_len);
+                if (rw) {
+                    font = TTF_OpenFontRW(rw, 1, config.font_size);
+                    if (!font) {
+                        std::cerr << "Failed to load embedded font: " << TTF_GetError() << std::endl;
+                    }
+                } else {
+                    std::cerr << "Failed to create RWops for embedded font" << std::endl;
+                }
             }
         }
 

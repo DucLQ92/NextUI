@@ -553,6 +553,8 @@ static const char *builtin_vi[][2] = {
     {"Files", "Quản lý tệp"},
     {"Remove Loading", "Tắt màn hình chờ"},
     {"Updater", "Cập nhật"},
+    {"EmuDrop", "EmuDrop (Tải game)"},
+    {"Pak Store", "Pak Store"},
     {"Tính năng đang phát triển...", "Tính năng đang phát triển..."},
     {"Coming soon", "Tính năng đang phát triển..."},
 
