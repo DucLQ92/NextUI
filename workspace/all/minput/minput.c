@@ -8,6 +8,7 @@
 #include "defines.h"
 #include "api.h"
 #include "utils.h"
+#include "i18n.h"
 
 // full-scale SDL joystick axis magnitude, used to map raw axis values to on-screen nub travel
 #define STICK_AXIS_MAX 32767
@@ -270,7 +271,7 @@ int main(int argc , char* argv[]) {
 				blitButton("START", screen, PAD_isPressed(BTN_START), x, y, w);
 				x += w + SCALE1(BUTTON_MARGIN);
 				
-				SDL_Surface* text = TTF_RenderUTF8_Blended(font.tiny, "QUIT", uintToColour(THEME_COLOR6_255));
+				SDL_Surface* text = TTF_RenderUTF8_Blended(font.tiny, _("QUIT"), uintToColour(THEME_COLOR6_255));
 				SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){x,y+(SCALE1(BUTTON_SIZE)-text->h)/2});
 				SDL_FreeSurface(text);
 			}

@@ -387,7 +387,7 @@ void ColorPickerMenu::drawCustom(SDL_Surface *surface, const SDL_Rect &dst, cons
     if(dstTitle.h > 0 && dstTitle.w > 0)
     {
         char display_name[256];
-        GFX_truncateText(font.large, label_.c_str(), display_name,
+        GFX_truncateText(font.large, _(label_.c_str()), display_name,
                          dstTitle.w, SCALE1(OPTION_PADDING * 2));
         SDL_Surface *title_text = TTF_RenderUTF8_Blended(font.large, display_name, uintToColour(THEME_COLOR4_255));
         // hate the hardcoded +4, but we are matching MinUI code here

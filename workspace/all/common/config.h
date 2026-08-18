@@ -147,6 +147,8 @@ typedef struct
 	// User-assignable buttons (see BTN_FN1/BTN_FN2/BTN_FN3 in platform.h).
 	// Action strings, "" == unassigned. See CFG_getFnAction().
 	char fnAction[FN_BUTTON_COUNT][256];
+	// Language / Localization
+	char language[16];
 
 	// Power
 	uint32_t screenTimeoutSecs;
@@ -250,6 +252,7 @@ typedef struct
 #define CFG_DEFAULT_TIMEZONE 320 // Europe/Berlin
 #define CFG_DEFAULT_GAMESWITCHER_CURTAIN 0
 #define CFG_DEFAULT_INPUT_PROMPT_STYLE INPUT_STYLE_TEXT
+#define CFG_DEFAULT_LANGUAGE "vi"
 
 // Notification defaults
 #define CFG_DEFAULT_NOTIFY_MANUAL_SAVE true
@@ -282,8 +285,8 @@ void CFG_print(void);
 void CFG_get(const char *key, char * value);
 // void CFG_defaults(NextUISettings*);
 // The font filename to use as the UI font.
-// Built-in: "font1.ttf" (Next, default), "font2.ttf" (OG)
-// Custom fonts go in RES_PATH alongside built-in fonts.
+// Built-in: "font1.ttf" (Next, default), "font2.ttf" (Be Vietnam)
+// Custom: any other .ttf/.otf file in RES_PATH alongside built-in fonts.
 const char* CFG_getFontFile(void);
 void CFG_setFontFile(const char* filename);
 // The font style to use for the UI font.
@@ -475,6 +478,10 @@ int CFG_getRAProgressNotificationDuration(void);
 void CFG_setRAProgressNotificationDuration(int seconds);
 int CFG_getRAAchievementSortOrder(void);
 void CFG_setRAAchievementSortOrder(int sortOrder);
+
+// Language / Localization
+const char* CFG_getLanguage(void);
+void CFG_setLanguage(const char* lang);
 
 void CFG_sync(void);
 void CFG_quit(void);

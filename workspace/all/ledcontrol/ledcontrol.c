@@ -5,6 +5,7 @@
 #include "defines.h"
 #include "api.h"
 #include "utils.h"
+#include "i18n.h"
 
 
 #define NUM_OPTIONS 4
@@ -314,7 +315,7 @@ int main(int argc, char *argv[])
             int max_width = screen->w - SCALE1(PADDING * 2) - ow;
             // Display light name
             char light_name_text[256];
-            snprintf(light_name_text, sizeof(light_name_text), "%s", lightnames[selected_light]);
+            snprintf(light_name_text, sizeof(light_name_text), "%s", _(lightnames[selected_light]));
 
             char title[256];
             int text_width = GFX_truncateText(font.medium, light_name_text, title, max_width, SCALE1(BUTTON_PADDING * 2));
@@ -354,7 +355,7 @@ int main(int argc, char *argv[])
                 int y = SCALE1(PADDING + PILL_SIZE * (j + 1));
 
                 if (j == 0) { // Display effect name instead of number
-                    snprintf(setting_text, sizeof(setting_text), "%s: %s", settings_labels[j], selected_light == 3 ? lr_effect_names[settings_values[j] - 1] : selected_light == 2 ? topbar_effect_names[settings_values[j] - 1] : effect_names[settings_values[j] - 1]);
+                    snprintf(setting_text, sizeof(setting_text), "%s: %s", _(settings_labels[j]), _(selected_light == 3 ? lr_effect_names[settings_values[j] - 1] : selected_light == 2 ? topbar_effect_names[settings_values[j] - 1] : effect_names[settings_values[j] - 1]));
                     SDL_Surface *text = TTF_RenderUTF8_Blended(font.medium, setting_text, current_color);
                     int text_width = text->w + SCALE1(BUTTON_PADDING * 2);
                     GFX_blitPill(selected ? ASSET_WHITE_PILL : ASSET_BLACK_PILL, screen,
@@ -364,7 +365,7 @@ int main(int argc, char *argv[])
                         &(SDL_Rect){SCALE1(PADDING + BUTTON_PADDING), y + SCALE1(4)});
                     SDL_FreeSurface(text);
                 } else if (j == 1) { // Display color as hex code
-                    snprintf(setting_text, sizeof(setting_text), "%s", settings_labels[j]);
+                    snprintf(setting_text, sizeof(setting_text), "%s", _(settings_labels[j]));
                     SDL_Surface *text = TTF_RenderUTF8_Blended(font.medium, setting_text, current_color);
                     int text_width = text->w + SCALE1(BUTTON_PADDING * 2);
                     GFX_blitPill(selected ? ASSET_WHITE_PILL : ASSET_BLACK_PILL, screen, 
@@ -380,7 +381,7 @@ int main(int argc, char *argv[])
                         y + SCALE1(BUTTON_MARGIN)
                     }, ((uint32_t)settings_values[j] << 8) | 0xFF);
                 } else  {
-                    snprintf(setting_text, sizeof(setting_text), "%s: %d", settings_labels[j], settings_values[j]);
+                    snprintf(setting_text, sizeof(setting_text), "%s: %d", _(settings_labels[j]), settings_values[j]);
                     SDL_Surface *text = TTF_RenderUTF8_Blended(font.medium, setting_text, current_color);
                     int text_width = text->w + SCALE1(BUTTON_PADDING * 2);
                     GFX_blitPill(selected ? ASSET_WHITE_PILL : ASSET_BLACK_PILL, screen, 

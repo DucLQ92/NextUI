@@ -246,9 +246,15 @@ InputReactionHint MenuItem::handleInput(int &dirty)
     }
     else if (PAD_justPressed(BTN_A))
     {
-        hint = NoOp; // not really, should check on_confirm
+        hint = NoOp;
         if (on_confirm)
             hint = on_confirm(*this);
+        else if (nextValue())
+        {
+            if (on_set)
+                on_set(getValue());
+            dirty = 1;
+        }
         dirty = 1;
     }
 
@@ -599,9 +605,9 @@ void MenuList::draw(SDL_Surface *surface, const SDL_Rect &dst, const SDL_Rect &d
         if (cur && cur->getDesc().length() > 0)
         {
             int w, h;
-            const auto description = cur->getDesc();
-            GFX_sizeText(font.tiny, description.c_str(), SCALE1(FONT_SMALL), &w, &h);
-            GFX_blitTextCPP(font.tiny, description.c_str(), SCALE1(FONT_SMALL), uintToColour(THEME_COLOR4_255), surface, {(dst.x + dst.w - w) / 2, dst.y + dst.h - h, w, h});
+            const char *description = _(cur->getDesc().c_str());
+            GFX_sizeText(font.tiny, description, SCALE1(FONT_SMALL), &w, &h);
+            GFX_blitTextCPP(font.tiny, description, SCALE1(FONT_SMALL), uintToColour(THEME_COLOR4_255), surface, {(dst.x + dst.w - w) / 2, dst.y + dst.h - h, w, h});
         }
     }
 
@@ -645,19 +651,20 @@ void MenuList::drawListItem(SDL_Surface *surface, const SDL_Rect &dst, const Abs
 {
     SDL_Color text_color = uintToColour(THEME_COLOR4_255);
     SDL_Surface *text;
+    const char *name = _(item.getName().c_str());
 
     // int ox = (dst.w - w) / 2; // if we're centering these (but I don't think we should after seeing it)
     if (selected)
     {
         // move out of conditional if centering
         int w = 0;
-        TTF_SizeUTF8(font.small, item.getName().c_str(), &w, NULL);
+        TTF_SizeUTF8(font.small, name, &w, NULL);
         w += SCALE1(OPTION_PADDING * 2);
 
         GFX_blitPillDarkCPP(ASSET_BUTTON, surface, {dst.x, dst.y, w, SCALE1(BUTTON_SIZE)});
         text_color = uintToColour(THEME_COLOR5_255);
     }
-    text = TTF_RenderUTF8_Blended(font.small, item.getName().c_str(), text_color);
+    text = TTF_RenderUTF8_Blended(font.small, name, text_color);
     SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y  + ((dst.h - text->h) / 2)});
     SDL_FreeSurface(text);
 }
@@ -705,6 +712,7 @@ void MenuList::drawFixedItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
     SDL_Color text_color = uintToColour(THEME_COLOR4_255);
     SDL_Color text_color_value = uintToColour(THEME_COLOR4_255);
     SDL_Surface *text;
+    const char *name = _(item.getName().c_str());
 
     // hack - this should be correlated to max_width
     int mw = dst.w;
@@ -717,7 +725,13 @@ void MenuList::drawFixedItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
 
     if (item.getValue().has_value())
     {
-        text = TTF_RenderUTF8_Blended(font.tiny, item.getLabel().c_str(), text_color_value);
+        std::string rawLabel = item.getLabel();
+        auto pos = rawLabel.find_first_of("\r\n");
+        if (pos != std::string::npos) rawLabel = rawLabel.substr(0, pos);
+        while (!rawLabel.empty() && (unsigned char)rawLabel.back() <= ' ') rawLabel.pop_back();
+
+        const char *label = _(rawLabel.c_str());
+        text = TTF_RenderUTF8_Blended(font.tiny, label, text_color_value);
 
         if (item.getType() == ListItemType::Color)
         {
@@ -761,13 +775,13 @@ void MenuList::drawFixedItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
     {
         // white pill
         int w = 0;
-        TTF_SizeUTF8(font.small, item.getName().c_str(), &w, NULL);
+        TTF_SizeUTF8(font.small, name, &w, NULL);
         w += SCALE1(OPTION_PADDING * 2);
         GFX_blitPillDarkCPP(ASSET_BUTTON, surface, {dst.x, dst.y, w, SCALE1(BUTTON_SIZE)});
         text_color = uintToColour(THEME_COLOR5_255);
     }
 
-    text = TTF_RenderUTF8_Blended(font.small, item.getName().c_str(), text_color);
+    text = TTF_RenderUTF8_Blended(font.small, name, text_color);
     SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
     SDL_FreeSurface(text);
 }
@@ -806,6 +820,7 @@ void MenuList::drawInputItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
 {
     SDL_Color text_color = COLOR_WHITE;
     SDL_Surface *text;
+    const char *name = _(item.getName().c_str());
 
     // hack
     int mw = dst.w;
@@ -817,12 +832,12 @@ void MenuList::drawInputItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
 
         // white pill
         int w = 0;
-        TTF_SizeUTF8(font.small, item.getName().c_str(), &w, NULL);
+        TTF_SizeUTF8(font.small, name, &w, NULL);
         w += SCALE1(OPTION_PADDING * 2);
         GFX_blitPillDarkCPP(ASSET_BUTTON, surface, {dst.x, dst.y, w, SCALE1(BUTTON_SIZE)});
         text_color = COLOR_BLACK;
     }
-    text = TTF_RenderUTF8_Blended(font.small, item.getName().c_str(), text_color);
+    text = TTF_RenderUTF8_Blended(font.small, name, text_color);
     SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
     SDL_FreeSurface(text);
 
@@ -832,7 +847,8 @@ void MenuList::drawInputItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
     }
     else if (item.getValue().has_value())
     {
-        text = TTF_RenderUTF8_Blended(font.tiny, item.getLabel().c_str(), COLOR_WHITE); // always white
+        const char *label = _(item.getLabel().c_str());
+        text = TTF_RenderUTF8_Blended(font.tiny, label, COLOR_WHITE); // always white
         SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + mw - text->w - SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
         SDL_FreeSurface(text);
     }
@@ -867,12 +883,13 @@ void MenuList::drawMainItem(SDL_Surface *surface, const SDL_Rect &dst, const Abs
 {
     SDL_Color text_color = COLOR_WHITE;
     SDL_Surface *text;
+    const char *name = _(item.getName().c_str());
 
     // TODO: unique item handling (draws grey text)
     const bool unique = false;
 
     char truncated[256];
-    int text_width = GFX_truncateText(font.large, item.getName().c_str(), truncated, dst.w, SCALE1(BUTTON_PADDING * 2));
+    int text_width = GFX_truncateText(font.large, name, truncated, dst.w, SCALE1(BUTTON_PADDING * 2));
     int max_width = std::min(dst.w, text_width);
 
     if (selected)

@@ -821,7 +821,7 @@ static Array* getQuickEntries(void) {
     if (hasTools() && !simple_mode) {
 		char tools_path[256];
 		snprintf(tools_path, sizeof(tools_path), "%s/Tools/%s", SDCARD_PATH, PLATFORM);
-        Array_push(entries, Entry_new(tools_path, ENTRY_DIR));
+        Array_push(entries, Entry_newNamed(tools_path, ENTRY_DIR, "Tools"));
     }
 
 	return entries;
@@ -844,7 +844,7 @@ static Array* getQuickToggles(void) {
 	if(BT_supported())
 		Array_push(entries, Entry_new("Bluetooth", ENTRY_DIP));
 	if(PLAT_supportsDeepSleep() && !simple_mode)
-		Array_push(entries, Entry_new("Sleep", ENTRY_DIP));
+		Array_push(entries, Entry_new((char*)_("Sleep"), ENTRY_DIP));
 	Array_push(entries, Entry_new("Reboot", ENTRY_DIP));
 	Array_push(entries, Entry_new("Poweroff", ENTRY_DIP));
 
@@ -2692,9 +2692,9 @@ int main (int argc, char *argv[]) {
 
 				// buttons (duped and trimmed from below)
 				if (show_setting && !GetHDMI()) GFX_blitHardwareHints(screen, show_setting);
-				else GFX_blitButtonGroup((char*[]){ BTN_SLEEP==BTN_POWER?"POWER":"MENU","SLEEP",  NULL }, 0, screen, 0);
+				else GFX_blitButtonGroup((char*[]){ BTN_SLEEP==BTN_POWER?"POWER":"MENU",(char*)_("SLEEP"),  NULL }, 0, screen, 0);
 
-				GFX_blitButtonGroup((char*[]){ "B","BACK", "A","OPEN", NULL }, 1, screen, 1);
+				GFX_blitButtonGroup((char*[]){ "B",(char*)_("BACK"), "A",(char*)_("OPEN"), NULL }, 1, screen, 1);
 
 				if(CFG_getShowQuickswitcherUI()) {
 					#define MENU_ITEM_SIZE 72 // item size, top line
@@ -2763,9 +2763,10 @@ int main (int argc, char *argv[]) {
 						}
 
 						int w, h;
-						GFX_sizeText(font.tiny, item->name, SCALE1(FONT_TINY), &w, &h);
+						const char* display_label = _(item->name);
+						GFX_sizeText(font.tiny, (char*)display_label, SCALE1(FONT_TINY), &w, &h);
 						SDL_Rect text_rect = {item_rect.x + (item_size - w) / 2, item_rect.y + item_size - h - SCALE1(BUTTON_MARGIN), w, h};
-						GFX_blitText(font.tiny, item->name, SCALE1(FONT_TINY), text_color, screen, &text_rect);
+						GFX_blitText(font.tiny, (char*)display_label, SCALE1(FONT_TINY), text_color, screen, &text_rect);
 
 						ox += item_rect.w + SCALE1(MENU_ITEM_MARGIN);
 					}
@@ -2869,10 +2870,10 @@ int main (int argc, char *argv[]) {
 						SDL_FreeSurface(text);
 					}
 
-					GFX_blitButtonGroup((char*[]){ "B","BACK",  NULL }, 0, screen, 0);
+					GFX_blitButtonGroup((char*[]){ "B",(char*)_("BACK"),  NULL }, 0, screen, 0);
 
-					if(can_resume) GFX_blitButtonGroup((char*[]){ "Y", "REMOVE", "A","RESUME", NULL }, 1, screen, 1);
-					else GFX_blitButtonGroup((char*[]){ "A","OPEN", NULL }, 1, screen, 1);
+					if(can_resume) GFX_blitButtonGroup((char*[]){ "Y", (char*)_("REMOVE"), "A",(char*)_("RESUME"), NULL }, 1, screen, 1);
+					else GFX_blitButtonGroup((char*[]){ "A",(char*)_("OPEN"), NULL }, 1, screen, 1);
 
 					if(has_preview) {
 						// lotta memory churn here
@@ -3049,23 +3050,23 @@ int main (int argc, char *argv[]) {
 
 				// buttons
 				if (show_setting && !GetHDMI()) GFX_blitHardwareHints(screen, show_setting);
-				else if (can_resume) GFX_blitButtonGroup((char*[]){ "X","RESUME",  NULL }, 0, screen, 0);
+				else if (can_resume) GFX_blitButtonGroup((char*[]){ "X",(char*)_("RESUME"),  NULL }, 0, screen, 0);
 				else GFX_blitButtonGroup((char*[]){
 					BTN_SLEEP==BTN_POWER?"POWER":"MENU",
-					BTN_SLEEP==BTN_POWER||simple_mode?"SLEEP":"INFO",
+					BTN_SLEEP==BTN_POWER||simple_mode?(char*)_("SLEEP"):(char*)_("INFO"),
 					NULL }, 0, screen, 0);
 
 				if (total==0) {
 					if (stack->count>1) {
-						GFX_blitButtonGroup((char*[]){ "B","BACK",  NULL }, 0, screen, 1);
+						GFX_blitButtonGroup((char*[]){ "B",(char*)_("BACK"),  NULL }, 0, screen, 1);
 					}
 				}
 				else {
 					if (stack->count>1) {
-						GFX_blitButtonGroup((char*[]){ "B","BACK", "A","OPEN", NULL }, 1, screen, 1);
+						GFX_blitButtonGroup((char*[]){ "B",(char*)_("BACK"), "A",(char*)_("OPEN"), NULL }, 1, screen, 1);
 					}
 					else {
-						GFX_blitButtonGroup((char*[]){ "A","OPEN", NULL }, 0, screen, 1);
+						GFX_blitButtonGroup((char*[]){ "A",(char*)_("OPEN"), NULL }, 0, screen, 1);
 					}
 				}
 
@@ -3090,8 +3091,9 @@ int main (int argc, char *argv[]) {
 						if (entry_unique) // Only render if a unique name exists
 							trimSortingMeta(&entry_unique);
 
+						const char *translated_name = _(entry_name);
 						char display_name[256];
-						int text_width = GFX_getTextWidth(font.large, entry_unique ? entry_unique : entry_name, display_name, available_width, SCALE1(BUTTON_PADDING * 2));
+						int text_width = GFX_getTextWidth(font.large, entry_unique ? (char*)_(entry_unique) : (char*)translated_name, display_name, available_width, SCALE1(BUTTON_PADDING * 2));
 						int max_width = MIN(available_width, text_width);
 
 						// This spaghetti is preventing white text on white pill when volume/color temp is shown,
@@ -3104,7 +3106,7 @@ int main (int argc, char *argv[]) {
 						}
 
 						SDL_LockMutex(fontMutex);
-						SDL_Surface* text = TTF_RenderUTF8_Blended(font.large, entry_name, text_color);
+						SDL_Surface* text = TTF_RenderUTF8_Blended(font.large, (char*)translated_name, text_color);
 						SDL_Surface* text_unique = TTF_RenderUTF8_Blended(font.large, display_name, COLOR_DARK_TEXT);
 						SDL_UnlockMutex(fontMutex);
 						// TODO: Use actual font metrics to center, this only works in simple cases
@@ -3122,7 +3124,7 @@ int main (int argc, char *argv[]) {
 							GFX_blitPillDark(ASSET_WHITE_PILL, globalpill, &(SDL_Rect){0,0, max_width, SCALE1(PILL_SIZE)});
 							globallpillW =  max_width;
 							SDL_UnlockMutex(animMutex);
-							updatePillTextSurface(entry_name, max_width, uintToColour(THEME_COLOR5_255));
+							updatePillTextSurface((char*)translated_name, max_width, uintToColour(THEME_COLOR5_255));
 							AnimTask* task = malloc(sizeof(AnimTask));
 							task->startX = SCALE1(BUTTON_MARGIN);
 							task->startY = SCALE1(previousY+PADDING);
@@ -3133,7 +3135,7 @@ int main (int argc, char *argv[]) {
 							task->move_w = max_width;
 							task->move_h = SCALE1(PILL_SIZE);
 							task->frames = should_animate && CFG_getMenuAnimations() ? 3:1;
-							task->entry_name = strdup(notext ? " " : entry_name);
+							task->entry_name = strdup(notext ? " " : (char*)translated_name);
 							animPill(task);
 						}
 						SDL_Rect text_rect = { 0, 0, max_width - SCALE1(BUTTON_PADDING*2), text->h };
@@ -3331,10 +3333,10 @@ int main (int argc, char *argv[]) {
 					int ow = GFX_blitHardwareGroup(screen, show_setting);
 					Entry* entry = top->entries->items[top->selected];
 					trimSortingMeta(&entry->name);
-					char* entry_text = entry->name;
+					char* entry_text = (char*)_(entry->name);
 					if (entry->unique) {
 						trimSortingMeta(&entry->unique);
-						entry_text = entry->unique;
+						entry_text = (char*)_(entry->unique);
 					}
 
 					int available_width = (had_thumb ? ox + SCALE1(BUTTON_MARGIN) : screen->w - SCALE1(BUTTON_MARGIN)) - SCALE1(PADDING * 2);

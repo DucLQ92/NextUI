@@ -2004,7 +2004,7 @@ static int HintToButton(char* hint) {
 	else if (strcasecmp(hint, "Home") == 0) {
 		return INPUT_BUTTON_HOME;
 	}
-	else if (strcasecmp(hint, "Power") == 0) {
+	else if (strcasecmp(hint, "Power") == 0 || strcasecmp(hint, "NGUỒN") == 0 || strcasecmp(hint, "Nguồn") == 0) {
 		return INPUT_BUTTON_POWER;
 	}
 
@@ -2073,10 +2073,11 @@ void GFX_blitButton(char *hint, char *button, SDL_Surface *dst, SDL_Rect *dst_re
 			ox += SCALE1(BUTTON_SIZE);
 		}
 		else {
+			// label
 			text = TTF_RenderUTF8_Blended(special_case ? font.large : font.tiny, button, ALT_BUTTON_TEXT_COLOR);
 			GFX_blitPillDark(ASSET_BUTTON, dst, &(SDL_Rect){dst_rect->x, dst_rect->y, SCALE1(BUTTON_SIZE) / 2 + text->w, SCALE1(BUTTON_SIZE)});
 			ox += SCALE1(BUTTON_SIZE) / 4;
-	
+
 			int oy = special_case ? SCALE1(-2) : 0;
 			SDL_BlitSurface(text, NULL, dst, &(SDL_Rect){ox + dst_rect->x, oy + dst_rect->y + (SCALE1(BUTTON_SIZE) - text->h) / 2, text->w, text->h});
 			ox += text->w;
@@ -2095,6 +2096,9 @@ void GFX_blitButton(char *hint, char *button, SDL_Surface *dst, SDL_Rect *dst_re
 }
 void GFX_blitMessage(TTF_Font *font, char *msg, SDL_Surface *dst, SDL_Rect *dst_rect)
 {
+	if (!msg) return;
+	msg = (char *)_(msg);
+
 	if (!dst_rect)
 		dst_rect = &(SDL_Rect){0, 0, dst->w, dst->h};
 
@@ -2458,8 +2462,8 @@ int GFX_blitButtonGroup(char **pairs, int primary, SDL_Surface *dst, int align_r
 		if (HAS_SKINNY_SCREEN && i != primary)
 			continue; // space saving
 
-		button = pairs[i * 2];
-		hint = pairs[i * 2 + 1];
+		button = pairs[i * 2] ? (char *)_(pairs[i * 2]) : "";
+		hint = pairs[i * 2 + 1] ? (char *)_(pairs[i * 2 + 1]) : "";
 		w = GFX_getButtonWidth(hint, button);
 		hints[h].hint = hint;
 		hints[h].button = button;
@@ -4213,15 +4217,15 @@ void PWR_powerOff(int reboot)
 		if (HAS_POWER_BUTTON || HAS_POWEROFF_BUTTON)
 		{
 			if (exists(AUTO_RESUME_PATH))
-				msg = (char *)"Quicksave created,\npowering off";
+				msg = (char *)_("Quicksave created,\npowering off");
 			else if (reboot > 0)
-				msg = (char *)"Rebooting";
+				msg = (char *)_("Rebooting");
 			else
-				msg = (char *)"Powering off";
+				msg = (char *)_("Powering off");
 		}
 		else
 		{
-			msg = exists(AUTO_RESUME_PATH) ? (char *)"Quicksave created,\npower off now" : (char *)"Power off now";
+			msg = exists(AUTO_RESUME_PATH) ? (char *)_("Quicksave created,\npower off now") : (char *)_("Power off now");
 		}
 
 		// LOG_info("PWR_powerOff %s (%ix%i)\n", gfx.screen, gfx.screen->w, gfx.screen->h);

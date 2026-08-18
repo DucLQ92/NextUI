@@ -1,0 +1,119 @@
+# NextUI English Translation File
+LanguageName=English
+
+# Main Launcher Navigation & Categories
+Recently Played=Recently Played
+Recents=Recents
+Consoles=Consoles
+Tools=Tools
+Collections=Collections
+Games=Games
+Empty=Empty
+Searching...=Searching...
+No games found=No games found
+No recent games=No recent games
+No ROMs found=No ROMs found
+No collections found=No collections found
+
+# Button Hints & Common Actions
+OPEN=OPEN
+BACK=BACK
+OPTIONS=OPTIONS
+SELECT=SELECT
+CONFIRM=CONFIRM
+CANCEL=CANCEL
+DELETE=DELETE
+INFO=INFO
+EXIT=EXIT
+SAVE=SAVE
+LOAD=LOAD
+CLOSE=CLOSE
+TOGGLE=TOGGLE
+CHANGE=CHANGE
+MUTE=MUTE
+SCAN=SCAN
+CONNECT=CONNECT
+DISCONNECT=DISCONNECT
+FORGET=FORGET
+SWITCH=SWITCH
+RESET=RESET
+RENAME=RENAME
+CLEAR=CLEAR
+OK=OK
+
+# In-Game Menu (Minarch)
+Resume=Resume
+Reset=Reset
+Save State=Save State
+Load State=Load State
+Save for Game=Save for Game
+Save for Console=Save for Console
+Core Options=Core Options
+Frontend Options=Frontend Options
+Cheats=Cheats
+Achievements=Achievements
+Controls=Controls
+Shortcuts=Shortcuts
+Display=Display
+Color Palette=Color Palette
+Exit Game=Exit Game
+Slot=Slot
+Auto=Auto
+Empty Slot=Empty Slot
+State Saved=State Saved
+State Loaded=State Loaded
+No Save State=No Save State
+Cheats Enabled=Cheats Enabled
+Cheats Disabled=Cheats Disabled
+No Cheats Found=No Cheats Found
+
+# Settings Menu Categories & Items
+Settings=Settings
+Language=Language
+Theme=Theme
+Display Settings=Display Settings
+Brightness=Brightness
+Color Temperature=Color Temperature
+Contrast=Contrast
+Saturation=Saturation
+Exposure=Exposure
+Volume=Volume
+Wi-Fi=Wi-Fi
+Bluetooth=Bluetooth
+RetroAchievements=RetroAchievements
+Button Mapping=Button Mapping
+Function Buttons=Function Buttons
+LED Control=LED Control
+Battery & Power=Battery & Power
+Date & Time=Date & Time
+Menu Animations=Menu Animations
+Menu Transitions=Menu Transitions
+Game Art=Game Art
+Game Switcher=Game Switcher
+Save Format=Save Format
+State Format=State Format
+Haptic Feedback=Haptic Feedback
+Screen Timeout=Screen Timeout
+Sleep Timeout=Sleep Timeout
+Power Off Protection=Power Off Protection
+Font=Font
+Color Scheme=Color Scheme
+NTP Sync=NTP Sync
+Timezone=Timezone
+
+# Notifications & Status
+Connected=Connected
+Disconnected=Disconnected
+Scanning...=Scanning...
+Connecting...=Connecting...
+Battery Low=Battery Low
+Charging=Charging
+Muted=Muted
+Unmuted=Unmuted
+Screenshot Saved=Screenshot Saved
+Syncing achievements...=Syncing achievements...
+Achievements synced=Achievements synced
+NTP Synced=NTP Synced
+Failed to connect=Failed to connect
+Password required=Password required
+Enter Password=Enter Password

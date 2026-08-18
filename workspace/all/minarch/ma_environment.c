@@ -208,7 +208,14 @@ bool environment_callback(unsigned cmd, void *data) { // copied from picoarch in
 	}
 	case RETRO_ENVIRONMENT_GET_LANGUAGE: { /* 39 */
 		// puts("RETRO_ENVIRONMENT_GET_LANGUAGE");
-		if (data) *(int *) data = RETRO_LANGUAGE_ENGLISH;
+		if (data) {
+			const char* lang = CFG_getLanguage();
+			if (lang && strcmp(lang, "vi") == 0) {
+				*(int *) data = 16; // RETRO_LANGUAGE_VIETNAMESE
+			} else {
+				*(int *) data = RETRO_LANGUAGE_ENGLISH;
+			}
+		}
 		break;
 	}
 	case RETRO_ENVIRONMENT_GET_CURRENT_SOFTWARE_FRAMEBUFFER: { /* (40 | RETRO_ENVIRONMENT_EXPERIMENTAL) */

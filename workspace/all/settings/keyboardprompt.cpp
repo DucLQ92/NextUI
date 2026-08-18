@@ -321,7 +321,7 @@ void KeyboardPrompt::drawKeyboard(SDL_Surface *screen, const AppState &state)
     // draw keyboard title
     if (!state.keyboard.title.empty())
     {
-        SDL_Surface *title = TTF_RenderUTF8_Blended(font.large, state.keyboard.title.c_str(), COLOR_WHITE);
+        SDL_Surface *title = TTF_RenderUTF8_Blended(font.large, _(state.keyboard.title.c_str()), COLOR_WHITE);
         SDL_Rect title_pos = {
             (screen->w - title->w) / 2, // center horizontally
             20,                         // 20px from top

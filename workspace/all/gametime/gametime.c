@@ -8,6 +8,7 @@
 #include "defines.h"
 #include "api.h"
 #include "utils.h"
+#include "i18n.h"
 
 #include <sqlite3.h>
 #include <gametimedb.h>
@@ -263,7 +264,7 @@ void renderList(int count, int start, int end, int selected)
         serializeTime(average, entry->play_time_average);
         snprintf(plays, 24, "%d", entry->play_count);
 
-        const char *details[] = {"TOTAL ", total, "  AVERAGE ", average, "  # PLAYS ", plays};
+        const char *details[] = {_("TOTAL "), total, _("  AVERAGE "), average, _("  # PLAYS "), plays};
         SDL_Rect detailsRect = {
             layout.list_display_start_x + num_width + thumbMargin + SCALE1(IMG_MAX_WIDTH), 
             layout.list_display_start_y + thumbMargin + textHeight + elemHeight * row, 
@@ -407,7 +408,7 @@ int main(int argc, char *argv[])
                 char play_time_total_formatted[255];
                 serializeTime(play_time_total_formatted, play_time_total);
                 char display_name[256];
-                sprintf(display_name, "Time spent having fun: %s", play_time_total_formatted);
+                sprintf(display_name, _("Time spent having fun: %s"), play_time_total_formatted);
 
                 char title[256];
                 int text_width = GFX_truncateText(font.large, display_name, title, max_width, SCALE1(BUTTON_PADDING * 2));

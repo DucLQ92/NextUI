@@ -37,8 +37,7 @@ RELEASE_NAME ?= $(RELEASE_BASE)-$(RELEASE_DOT)
 # Extra paks to ship
 VENDOR_DEST := ./build/VENDOR/Tools
 PACKAGE_URL_MAPPINGS := \
-	"https://github.com/UncleJunVIP/nextui-pak-store/releases/latest/download/Pak.Store.pakz nextui.pak_store.pakz" \
-	"https://github.com/LoveRetro/nextui-updater-pak/releases/latest/download/nextui.updater.pakz nextui.updater.pakz"
+	"https://github.com/UncleJunVIP/nextui-pak-store/releases/latest/download/Pak.Store.pakz nextui.pak_store.pakz"
 	# add more URLs as needed
 
 ###########################################################
@@ -269,8 +268,8 @@ package: tidy
 	cd ./build/EXTRAS && zip -r ../../releases/$(RELEASE_NAME)-extras.zip Bios Emus Roms Saves Shaders Overlays Tools README.txt
 	echo "$(RELEASE_VERSION)" > ./build/latest.txt
 
-	# compound zip (brew install libzip needed) 
-	-cd ./releases && (which zipmerge >/dev/null 2>&1 && zipmerge $(RELEASE_NAME)-all.zip $(RELEASE_NAME)-base.zip && zipmerge $(RELEASE_NAME)-all.zip $(RELEASE_NAME)-extras.zip) || cp $(RELEASE_NAME)-base.zip $(RELEASE_NAME)-all.zip 2>/dev/null || true
+	# compound zip (merge base and extras into all)
+	@python3 -c "import zipfile; out = zipfile.ZipFile('releases/$(RELEASE_NAME)-all.zip', 'w', zipfile.ZIP_DEFLATED); seen = set(); [out.writestr(item, z.read(item.filename)) for src in ['releases/$(RELEASE_NAME)-base.zip', 'releases/$(RELEASE_NAME)-extras.zip'] for z in [zipfile.ZipFile(src)] for item in z.infolist() if item.filename not in seen and not seen.add(item.filename)]; out.close()" 2>/dev/null || (cd ./releases && cp $(RELEASE_NAME)-base.zip $(RELEASE_NAME)-all.zip)
 	
 ###########################################################
 

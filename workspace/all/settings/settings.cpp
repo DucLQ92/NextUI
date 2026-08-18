@@ -99,7 +99,7 @@ struct FontEntry {
 static std::vector<FontEntry> enumerateFonts() {
     std::vector<FontEntry> fonts;
     fonts.push_back({"font1.ttf", "Next"});
-    fonts.push_back({"font2.ttf", "OG"});
+    fonts.push_back({"font2.ttf", "Be Vietnam"});
 
     DIR *dir = opendir(RES_PATH);
     if (dir) {
@@ -565,7 +565,35 @@ int main(int argc, char *argv[])
 
         auto displayMenu = new MenuList(MenuItemType::Fixed, "Display", displayItems);
 
+        char lang_codes[10][16];
+        char lang_names[10][32];
+        int num_langs = i18n_get_available_languages(lang_codes, lang_names, 10);
+        std::vector<std::any> lang_values;
+        std::vector<std::string> lang_labels;
+        std::vector<AbstractMenuItem*> langSubItems;
+        for (int i = 0; i < num_langs; i++) {
+            std::string code = lang_codes[i];
+            std::string name = lang_names[i];
+            lang_values.push_back(code);
+            lang_labels.push_back(name);
+            langSubItems.push_back(new MenuItem{ListItemType::Button, name, "",
+                [code](AbstractMenuItem &) -> InputReactionHint {
+                    CFG_setLanguage(code.c_str());
+                    return Exit;
+                }
+            });
+        }
+        auto *langMenu = new MenuList(MenuItemType::Fixed, "Language", std::move(langSubItems));
+
         std::vector<AbstractMenuItem*> systemItems = {
+            new MenuItem{ListItemType::Generic, "Language", "Select interface language", lang_values, lang_labels,
+            []() -> std::any { return std::string(CFG_getLanguage()); },
+            [](const std::any &value) {
+                std::string lang = std::any_cast<std::string>(value);
+                CFG_setLanguage(lang.c_str());
+            },
+            []() { CFG_setLanguage(CFG_DEFAULT_LANGUAGE); },
+            DeferToSubmenu, langMenu},
             new MenuItem{ListItemType::Generic, "Volume", "Speaker volume",
             {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20},
             {"Muted", "5%","10%","15%","20%","25%","30%","35%","40%","45%","50%","55%","60%","65%","70%","75%","80%","85%","90%","95%","100%"},
@@ -1031,41 +1059,60 @@ int main(int argc, char *argv[])
                 "reverting to clean stock firmware.",
                 OverlayDismissMode::DismissOnA);
 
+        auto cleanSingleLine = [](std::string str) -> std::string {
+            auto pos = str.find_first_of("\r\n");
+            if (pos != std::string::npos)
+                str = str.substr(0, pos);
+            while (!str.empty() && (unsigned char)str.back() <= ' ')
+                str.pop_back();
+            while (!str.empty() && (unsigned char)str.front() <= ' ')
+                str.erase(0, 1);
+            return str;
+        };
+
         auto aboutMenu = new MenuList(MenuItemType::Fixed, "About",
         {
             new StaticMenuItem{ListItemType::Generic, "NextUI version", "",
-            []() -> std::any {
-                std::ifstream t(ROOT_SYSTEM_PATH "/version.txt");
-                std::stringstream buffer;
-                buffer << t.rdbuf();
-                return buffer.str();
+            [cleanSingleLine]() -> std::any {
+                std::ifstream t(ROOT_SYSTEM_PATH "version.txt");
+                std::string line;
+                if (t.is_open() && std::getline(t, line)) {
+                    line = cleanSingleLine(line);
+                    if (!line.empty()) return line;
+                }
+                return std::string("NextUI");
             }},
             new StaticMenuItem{ListItemType::Generic, "Platform", "",
-            []() -> std::any {
-                return std::string(PLAT_getModel()); }
-            },
+            [cleanSingleLine]() -> std::any {
+                const char *model = PLAT_getModel();
+                std::string str = cleanSingleLine(model ? model : "Trimui");
+                return str.empty() ? std::string("Trimui Smart Pro") : str;
+            }},
             new StaticMenuItem{ListItemType::Generic, "Stock OS version", "",
-            []() -> std::any {
-                char osver[128];
-                PLAT_getOsVersionInfo(osver, 128);
-                return std::string(osver); }
-            },
+            [cleanSingleLine]() -> std::any {
+                char osver[128] = {0};
+                PLAT_getOsVersionInfo(osver, sizeof(osver) - 1);
+                std::string str = cleanSingleLine(osver);
+                return str.empty() ? std::string("Unknown") : str;
+            }},
             new StaticMenuItem{ListItemType::Generic, "Busybox version", "",
-            [&]() -> std::any { return bbver; }
-            },
+            [&, cleanSingleLine]() -> std::any {
+                std::string str = cleanSingleLine(bbver);
+                return str.empty() ? std::string("Unknown") : str;
+            }},
         });
 
-        MenuList *buttonMenu = buildFnButtonMenu(); // nullptr if this device has none
-
         std::vector<AbstractMenuItem*> mainItems = {
-            new MenuItem{ListItemType::Generic, "Appearance", "UI customization", {}, {}, nullptr, nullptr, DeferToSubmenu, appearanceMenu},
-            new MenuItem{ListItemType::Generic, "Display", "", {}, {}, nullptr, nullptr, DeferToSubmenu, displayMenu},
-            new MenuItem{ListItemType::Generic, "System", "", {}, {}, nullptr, nullptr, DeferToSubmenu, systemMenu},
+            new MenuItem{ListItemType::Generic, _("Appearance"), _("UI customization"), {}, {}, nullptr, nullptr, DeferToSubmenu, appearanceMenu},
+            new MenuItem{ListItemType::Generic, _("Display"), "", {}, {}, nullptr, nullptr, DeferToSubmenu, displayMenu},
+            new MenuItem{ListItemType::Generic, _("System"), "", {}, {}, nullptr, nullptr, DeferToSubmenu, systemMenu},
         };
 
         if(deviceInfo.hasMuteToggle())
             mainItems.push_back(new MenuItem{ListItemType::Generic, "FN switch", "FN switch settings", {}, {}, nullptr, nullptr, DeferToSubmenu,
                 new MenuList(MenuItemType::Fixed, "FN Switch", muteItems)});
+
+        MenuList *buttonMenu = buildFnButtonMenu(); // nullptr if this device has none
 
         if(buttonMenu)
             mainItems.push_back(new MenuItem{ListItemType::Generic, "Assignments", "Customize button assignments", {}, {}, nullptr, nullptr, DeferToSubmenu, buttonMenu});

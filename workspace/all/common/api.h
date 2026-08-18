@@ -4,6 +4,7 @@
 #include "platform.h"
 #include "scaler.h"
 #include "config.h"
+#include "i18n.h"
 #include <stdbool.h>
 
 ///////////////////////////////

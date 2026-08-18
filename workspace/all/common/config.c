@@ -1,4 +1,5 @@
 #include "config.h"
+#include "i18n.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,6 +67,7 @@ void CFG_defaults(NextUISettings *cfg)
         .muteLeds = CFG_DEFAULT_MUTELEDS,
 
         .fnAction = {CFG_DEFAULT_FN_ACTION, CFG_DEFAULT_FN_ACTION, CFG_DEFAULT_FN_ACTION},
+        .language = CFG_DEFAULT_LANGUAGE,
 
         .screenTimeoutSecs = CFG_DEFAULT_SCREENTIMEOUTSECS,
         .suspendTimeoutSecs = CFG_DEFAULT_SUSPENDTIMEOUTSECS,
@@ -519,9 +521,19 @@ void CFG_init(FontLoad_callback_t cb, ColorSet_callback_t ccb)
                 CFG_setInputPromptStyle(temp_value);
                 continue;
             }
+            if (strncmp(line, "language=", 9) == 0)
+            {
+                char *value = line + 9;
+                value[strcspn(value, "\r\n")] = 0;
+                strncpy(settings.language, value, sizeof(settings.language) - 1);
+                settings.language[sizeof(settings.language) - 1] = '\0';
+                continue;
+            }
         }
         fclose(file);
     }
+
+    i18n_init(settings.language);
 
     // load gfx related stuff until we drop the indirection
     CFG_setColor(1, CFG_getColor(COLOR_MAIN));
@@ -1565,6 +1577,10 @@ void CFG_get(const char *key, char *value)
     {
         sprintf(value, "%i", CFG_getInputPromptStyle());
     }
+    else if (strcmp(key, "language") == 0)
+    {
+        sprintf(value, "%s", CFG_getLanguage());
+    }
 
     // meta, not a real setting
     else if (strcmp(key, "fontpath") == 0)
@@ -1584,8 +1600,7 @@ void CFG_sync(void)
     const char *shared_userdata = getenv("SHARED_USERDATA_PATH");
     if (!shared_userdata || !shared_userdata[0])
     {
-        printf("[CFG] SHARED_USERDATA_PATH is not set!\n");
-        return;
+        shared_userdata = SHARED_USERDATA_PATH;
     }
 
     snprintf(settingsPath, sizeof(settingsPath), "%s/minuisettings.txt", shared_userdata);
@@ -1666,6 +1681,7 @@ void CFG_sync(void)
     fprintf(file, "fontStyle=%i\n", settings.fontStyle);
     fprintf(file, "gameSwitcherCurtain=%i\n", settings.gameSwitcherCurtain);
     fprintf(file, "inputPromptStyle=%i\n", settings.inputPromptStyle);
+    fprintf(file, "language=%s\n", settings.language);
 
     fclose(file);
 }
@@ -1750,3 +1766,18 @@ void CFG_quit(void)
 {
     CFG_sync();
 }
+
+const char *CFG_getLanguage(void)
+{
+    return settings.language;
+}
+
+void CFG_setLanguage(const char *lang)
+{
+    if (!lang || strlen(lang) == 0) return;
+    strncpy(settings.language, lang, sizeof(settings.language) - 1);
+    settings.language[sizeof(settings.language) - 1] = '\0';
+    i18n_init(settings.language);
+    CFG_sync();
+}
+
