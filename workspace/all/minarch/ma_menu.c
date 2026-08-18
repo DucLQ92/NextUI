@@ -22,6 +22,7 @@
 #include "ma_video.h"
 #include "ma_frontend_opts.h"
 #include "ma_menu.h"
+#include "i18n.h"
 
 ///////////////////////////////
 
@@ -1171,7 +1172,7 @@ int Menu_options(MenuList* list) {
 		GFX_clear(screen);
 		GFX_blitHardwareGroup(screen, show_settings);
 		
-		char* desc = NULL;
+		const char* desc = NULL;
 		SDL_Surface* text;
 
 		if (type==MENU_LIST) {
@@ -1181,7 +1182,7 @@ int Menu_options(MenuList* list) {
 				for (int i=0; i<count; i++) {
 					MenuItem* item = &items[i];
 					int w = 0;
-					TTF_SizeUTF8(font.small, item->name, &w, NULL);
+					TTF_SizeUTF8(font.small, _(item->name), &w, NULL);
 					w += SCALE1(OPTION_PADDING*2);
 					if (w>mw) mw = w;
 				}
@@ -1199,7 +1200,7 @@ int Menu_options(MenuList* list) {
 				if (j==selected_row) {
 					// move out of conditional if centering
 					int w = 0;
-					TTF_SizeUTF8(font.small, item->name, &w, NULL);
+					TTF_SizeUTF8(font.small, _(item->name), &w, NULL);
 					w += SCALE1(OPTION_PADDING*2);
 					
 					GFX_blitPillDark(ASSET_BUTTON, screen, &(SDL_Rect){
@@ -1210,9 +1211,9 @@ int Menu_options(MenuList* list) {
 					});
 					text_color = uintToColour(THEME_COLOR5_255);
 					
-					if (item->desc) desc = item->desc;
+					if (item->desc) desc = _(item->desc);
 				}
-				text = TTF_RenderUTF8_Blended(font.small, item->name, text_color);
+				text = TTF_RenderUTF8_Blended(font.small, _(item->name), text_color);
 				SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
 					ox+SCALE1(OPTION_PADDING),
 					oy+SCALE1((j*BUTTON_SIZE)+1)
@@ -1259,7 +1260,8 @@ int Menu_options(MenuList* list) {
 						while ( item->values && item->values[count]) count++;
 						if (item->value >= 0 && item->value < count) {
 							const char *str = item->values[item->value];
-							text = TTF_RenderUTF8_Blended(font.tiny, str ? str : "none", str ? COLOR_WHITE : COLOR_GRAY); // always white
+							const char *translated_str = str ? _(str) : _("none");
+							text = TTF_RenderUTF8_Blended(font.tiny, translated_str, str ? COLOR_WHITE : COLOR_GRAY); // always white
 							if (text) {
 								SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
 									ox + mw - text->w - SCALE1(OPTION_PADDING),
@@ -1275,7 +1277,7 @@ int Menu_options(MenuList* list) {
 				if (j==selected_row) {
 					// white pill
 					int w = 0;
-					TTF_SizeUTF8(font.small, item->name, &w, NULL);
+					TTF_SizeUTF8(font.small, _(item->name), &w, NULL);
 					w += SCALE1(OPTION_PADDING*2);
 					GFX_blitPillDark(ASSET_BUTTON, screen, &(SDL_Rect){
 						ox,
@@ -1285,9 +1287,9 @@ int Menu_options(MenuList* list) {
 					});
 					text_color = uintToColour(THEME_COLOR5_255);
 					
-					if (item->desc) desc = item->desc;
+					if (item->desc) desc = _(item->desc);
 				}
-				text = TTF_RenderUTF8_Blended(font.small, item->name, text_color);
+				text = TTF_RenderUTF8_Blended(font.small, _(item->name), text_color);
 				SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
 					ox+SCALE1(OPTION_PADDING),
 					oy+SCALE1((j*BUTTON_SIZE)+1)
@@ -1305,13 +1307,13 @@ int Menu_options(MenuList* list) {
 					int w = 0;
 					int lw = 0;
 					int rw = 0;
-					TTF_SizeUTF8(font.small, item->name, &lw, NULL);
+					TTF_SizeUTF8(font.small, _(item->name), &lw, NULL);
 					// every value list in an input table is the same
 					// so only calculate rw for the first item...
 					if (!mrw || type!=MENU_INPUT) {
 						if(item->values) {
 							for (int j=0; item->values[j]; j++) {
-								TTF_SizeUTF8(font.tiny, item->values[j], &rw, NULL);
+								TTF_SizeUTF8(font.tiny, _(item->values[j]), &rw, NULL);
 								if (lw+rw>w) w = lw+rw;
 								if (rw>mrw) mrw = rw;
 							}
@@ -1346,7 +1348,7 @@ int Menu_options(MenuList* list) {
 					
 					// white pill
 					int w = 0;
-					TTF_SizeUTF8(font.small, item->name, &w, NULL);
+					TTF_SizeUTF8(font.small, _(item->name), &w, NULL);
 					w += SCALE1(OPTION_PADDING*2);
 					GFX_blitPillDark(ASSET_BUTTON, screen, &(SDL_Rect){
 						ox,
@@ -1356,9 +1358,9 @@ int Menu_options(MenuList* list) {
 					});
 					text_color = uintToColour(THEME_COLOR5_255);
 					
-					if (item->desc) desc = item->desc;
+					if (item->desc) desc = _(item->desc);
 				}
-				text = TTF_RenderUTF8_Blended(font.small, item->name, text_color);
+				text = TTF_RenderUTF8_Blended(font.small, _(item->name), text_color);
 				SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
 					ox+SCALE1(OPTION_PADDING),
 					oy+SCALE1((j*BUTTON_SIZE)+1)
@@ -1372,7 +1374,7 @@ int Menu_options(MenuList* list) {
 					int count = 0;
 					while ( item->values && item->values[count]) count++;
 					if (item->value >= 0 && item->value < count) {
-						text = TTF_RenderUTF8_Blended(font.tiny, item->values[item->value], COLOR_WHITE); // always white
+						text = TTF_RenderUTF8_Blended(font.tiny, _(item->values[item->value]), COLOR_WHITE); // always white
 						SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
 							ox + mw - text->w - SCALE1(OPTION_PADDING),
 							oy+SCALE1((j*BUTTON_SIZE)+3)
@@ -1392,7 +1394,7 @@ int Menu_options(MenuList* list) {
 			if (end<count) GFX_blitAsset(ASSET_SCROLL_DOWN, NULL, screen, &(SDL_Rect){ox, screen->h - SCALE1(PADDING + PILL_SIZE + BUTTON_SIZE) + oy});
 		}
 		
-		if (!desc && list->desc) desc = list->desc;
+		if (!desc && list->desc) desc = _(list->desc);
 		
 		if (desc) {
 			int w,h;
@@ -1771,7 +1773,7 @@ void Menu_loop(void) {
 	char disc_name[16];
 	if (menu.total_discs) {
 		rom_disc = menu.disc;
-		sprintf(disc_name, "Disc %i", menu.disc+1);
+		snprintf(disc_name, sizeof(disc_name), "%s %i", _("Disc"), menu.disc+1);
 	}
 		
 	int selected = 0; // resets every launch

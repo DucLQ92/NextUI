@@ -19,6 +19,7 @@
 #include "ma_environment.h"
 #include "ma_config.h"
 #include "ma_runframe.h"
+#include "i18n.h"
 
 ///////////////////////////////////////
 
@@ -205,6 +206,7 @@ int main(int argc , char* argv[]) {
 	SND_init(core.sample_rate, core.fps);
 	SND_registerDeviceWatcher(Audio_onSinkChanged);
 	InitSettings(); // after we initialize audio
+	i18n_init(CFG_getLanguage());
 	Menu_init();
 	Notification_init();
 	
