@@ -375,6 +375,8 @@ SDL_Surface *GFX_init(int mode)
 
 	PLAT_initLid();
 	LEDS_initLeds();
+	// Register LED theme sync callback so CFG_applyLedThemeSync can update LED hardware
+	CFG_setLedThemeSyncCallback(LEDS_applyThemeColor);
 
 	RGB_WHITE = SDL_MapRGB(gfx.screen->format, TRIAD_WHITE);
 	RGB_BLACK = SDL_MapRGB(gfx.screen->format, TRIAD_BLACK);
@@ -4663,6 +4665,25 @@ int LEDS_getProfileOverride()
 	
 	LOG_debug("LEDS_getProfileOverride: %i\n", profile_override[profile_override_top]);
 	return profile_override[profile_override_top];
+}
+
+// Apply accent color from LED Theme Sync to all LEDs in lightsDefault.
+// Called by CFG_applyLedThemeSync via the registered callback.
+void LEDS_applyThemeColor(uint32_t rgb_hex)
+{
+	if (lights_initialized == 0) return;
+
+	char *device = getenv("DEVICE");
+	int lightsize = 3; // smartpro/s default
+	if (device) {
+		if (strstr(device, "brickpro")) lightsize = 5;
+		else if (strstr(device, "brick")) lightsize = 4;
+	}
+	for (int i = 0; i < lightsize; i++) {
+		lightsDefault[i].color1 = rgb_hex;
+		lightsDefault[i].color2 = rgb_hex;
+		PLAT_setLedColor(&lightsDefault[i]);
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////

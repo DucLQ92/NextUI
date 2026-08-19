@@ -967,12 +967,15 @@ void CFG_setLedThemeSync(bool on)
 
 // Rewrite the color1/color2 fields in a ledsettings .txt file to match rgb_hex.
 // Returns 0 on success, -1 on failure.
+// Uses SHARED_USERDATA_PATH directly (no PLAT_ dependency).
 static int rewrite_led_colors_in_file(const char *filename, uint32_t rgb_hex)
 {
-    // Read existing file into memory
-    FILE *r = PLAT_OpenSettings(filename);
-    if (!r) return -1;
+    char path[256];
+    snprintf(path, sizeof(path), "/mnt/SDCARD/.userdata/shared/%s", filename);
 
+    // Read existing file
+    FILE *r = fopen(path, "r");
+    if (!r) return -1;
     char lines[64][256];
     int nlines = 0;
     while (nlines < 64 && fgets(lines[nlines], sizeof(lines[nlines]), r))
@@ -980,7 +983,7 @@ static int rewrite_led_colors_in_file(const char *filename, uint32_t rgb_hex)
     fclose(r);
 
     // Write back, replacing color1= and color2= values
-    FILE *w = PLAT_WriteSettings(filename);
+    FILE *w = fopen(path, "w");
     if (!w) return -1;
     for (int i = 0; i < nlines; i++) {
         if (strncmp(lines[i], "color1=", 7) == 0)
@@ -994,6 +997,11 @@ static int rewrite_led_colors_in_file(const char *filename, uint32_t rgb_hex)
     return 0;
 }
 
+void CFG_setLedThemeSyncCallback(LedThemeSync_callback_t cb)
+{
+    settings.onLedThemeSync = cb;
+}
+
 void CFG_applyLedThemeSync(void)
 {
     if (!settings.ledThemeSync) return;
@@ -1001,26 +1009,15 @@ void CFG_applyLedThemeSync(void)
     // Extract RGB from accent color (color2_255 is stored as 0xRRGGBBAA)
     uint32_t rgb_hex = (settings.color2_255 >> 8) & 0xFFFFFF;
 
-    // 1. Update in-memory lightsDefault so LEDS_updateLeds uses the new color
-    extern LightSettings lightsDefault[];
-    extern int MAX_LIGHTS;
-    char *device = getenv("DEVICE");
-    int lightsize = 3; // smartpro/s default
-    if (device) {
-        if (strstr(device, "brickpro")) lightsize = 5;
-        else if (strstr(device, "brick")) lightsize = 4;
-    }
-    for (int i = 0; i < lightsize; i++) {
-        lightsDefault[i].color1 = rgb_hex;
-        lightsDefault[i].color2 = rgb_hex;
-        PLAT_setLedColor(&lightsDefault[i]);
-    }
+    // 1. Call the platform callback (registered from api.c) to update LED hardware
+    if (settings.onLedThemeSync)
+        settings.onLedThemeSync(rgb_hex);
 
-    // 2. Persist to ledsettings.txt (and variants) so LedControl stays in sync
-    char *device2 = getenv("DEVICE");
-    if (device2 && strstr(device2, "brickpro"))
+    // 2. Persist to ledsettings.txt so LedControl stays in sync
+    char *device = getenv("DEVICE");
+    if (device && strstr(device, "brickpro"))
         rewrite_led_colors_in_file("ledsettings_brickpro.txt", rgb_hex);
-    else if (device2 && strstr(device2, "brick"))
+    else if (device && strstr(device, "brick"))
         rewrite_led_colors_in_file("ledsettings_brick.txt", rgb_hex);
     else
         rewrite_led_colors_in_file("ledsettings.txt", rgb_hex);

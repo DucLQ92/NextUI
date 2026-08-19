@@ -18,6 +18,9 @@ extern uint32_t THEME_COLOR7_255;
 
 typedef int (*FontLoad_callback_t)(const char* path);
 typedef int (*ColorSet_callback_t)(void);
+// Called by CFG_applyLedThemeSync with the RGB accent color (0xRRGGBB, no alpha).
+// Register in api.c via CFG_setLedThemeSyncCallback to perform LED+file update.
+typedef void (*LedThemeSync_callback_t)(uint32_t rgb_hex);
 
 enum
 {
@@ -125,6 +128,9 @@ typedef struct
 
     // color update callback
     ColorSet_callback_t onColorSet;
+
+    // LED theme sync callback (registered from api.c)
+    LedThemeSync_callback_t onLedThemeSync;
 
     // UI
 	bool showClock;
@@ -396,6 +402,8 @@ void CFG_setMuteLEDs(bool);
 bool CFG_getLedThemeSync(void);
 void CFG_setLedThemeSync(bool);
 void CFG_applyLedThemeSync(void); // apply accent color → LEDs + ledsettings.txt
+// Register the platform callback that performs the actual LED hardware + file update.
+void CFG_setLedThemeSyncCallback(LedThemeSync_callback_t cb);
 // The action bound to a user-assignable button, where `index` is 0 (FN1), 1 (FN2) or
 // 2 (FN3, the "HOME" button).
 // The value is a "<kind>:<arg>" action string so more kinds can be added later without
