@@ -971,7 +971,7 @@ void CFG_setLedThemeSync(bool on)
 static int rewrite_led_colors_in_file(const char *filename, uint32_t rgb_hex)
 {
     char path[256];
-    snprintf(path, sizeof(path), "/mnt/SDCARD/.userdata/shared/%s", filename);
+    snprintf(path, sizeof(path), "%s/%s", SHARED_USERDATA_PATH, filename);
 
     // Read existing file
     FILE *r = fopen(path, "r");

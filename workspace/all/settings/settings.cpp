@@ -432,6 +432,10 @@ int main(int argc, char *argv[])
         appearanceItems.push_back(buildPaletteMenuItem());
         for (auto *item : colorMenuItems)
             appearanceItems.push_back(item);
+        appearanceItems.push_back(new MenuItem{ListItemType::Generic, "LED Theme Sync", "Sync LED color with the active palette's accent color. Also updates LedControl settings.", {false, true}, on_off,
+            []() -> std::any { return CFG_getLedThemeSync(); },
+            [](const std::any &value) { CFG_setLedThemeSync(std::any_cast<bool>(value)); },
+            []() { CFG_setLedThemeSync(CFG_DEFAULT_LED_THEME_SYNC); }});
         appearanceItems.push_back(new MenuItem{ListItemType::Generic, "Show battery percentage", "Show battery level as percent in the status pill", {false, true}, on_off,
             []() -> std::any { return CFG_getShowBatteryPercent(); },
             [](const std::any &value) { CFG_setShowBatteryPercent(std::any_cast<bool>(value)); },
@@ -491,10 +495,6 @@ int main(int argc, char *argv[])
         // [](const std::any &value)
         // { CFG_setGameSwitcherScaling(std::any_cast<int>(value)); },
         // []() { CFG_setGameSwitcherScaling(CFG_DEFAULT_GAMESWITCHERSCALING);}},
-        appearanceItems.push_back(new MenuItem{ListItemType::Generic, "LED Theme Sync", "Sync LED color with the active palette's accent color. Also updates LedControl settings.", {false, true}, on_off,
-            []() -> std::any { return CFG_getLedThemeSync(); },
-            [](const std::any &value) { CFG_setLedThemeSync(std::any_cast<bool>(value)); },
-            []() { CFG_setLedThemeSync(CFG_DEFAULT_LED_THEME_SYNC); }});
         appearanceItems.push_back(new MenuItem{ListItemType::Button, "Reset to defaults", "Resets all options in this menu to their default values.", ResetCurrentMenu});
         auto *appearanceMenu = new MenuList(MenuItemType::Fixed, "Appearance", std::move(appearanceItems));
 
