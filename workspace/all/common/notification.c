@@ -112,7 +112,16 @@ static SDL_mutex* progress_mutex = NULL;
 // 1. Notifications render to an RGBA surface for GL overlay compositing
 // 2. GFX_blitPill* use pre-made theme assets requiring screen format surfaces
 // 3. Direct pixel manipulation avoids format conversion overhead during animation
-static void draw_rounded_rect(SDL_Surface* surface, int x, int y, int w, int h, int radius, Uint32 color) {
+// Which corners get rounded (see draw_rounded_rect_corners). An element flush
+// against a screen edge wants the corners on that edge squared off, otherwise
+// the rounding leaves a notch of game visible in the screen corner.
+#define CORNER_TL 0x1
+#define CORNER_TR 0x2
+#define CORNER_BL 0x4
+#define CORNER_BR 0x8
+#define CORNER_ALL (CORNER_TL | CORNER_TR | CORNER_BL | CORNER_BR)
+
+static void draw_rounded_rect_corners(SDL_Surface* surface, int x, int y, int w, int h, int radius, int corners, Uint32 color) {
     if (!surface || w <= 0 || h <= 0) return;
     
     // Clamp radius to half the smallest dimension
@@ -126,23 +135,23 @@ static void draw_rounded_rect(SDL_Surface* surface, int x, int y, int w, int h, 
         for (int px = 0; px < w; px++) {
             int draw = 1;
             
-            // Check corners
-            if (px < radius && py < radius) {
+            // Check corners (only the ones selected in the mask are rounded)
+            if ((corners & CORNER_TL) && px < radius && py < radius) {
                 // Top-left corner
                 int dx = radius - px - 1;
                 int dy = radius - py - 1;
                 if (dx * dx + dy * dy > radius * radius) draw = 0;
-            } else if (px >= w - radius && py < radius) {
+            } else if ((corners & CORNER_TR) && px >= w - radius && py < radius) {
                 // Top-right corner
                 int dx = px - (w - radius);
                 int dy = radius - py - 1;
                 if (dx * dx + dy * dy > radius * radius) draw = 0;
-            } else if (px < radius && py >= h - radius) {
+            } else if ((corners & CORNER_BL) && px < radius && py >= h - radius) {
                 // Bottom-left corner
                 int dx = radius - px - 1;
                 int dy = py - (h - radius);
                 if (dx * dx + dy * dy > radius * radius) draw = 0;
-            } else if (px >= w - radius && py >= h - radius) {
+            } else if ((corners & CORNER_BR) && px >= w - radius && py >= h - radius) {
                 // Bottom-right corner
                 int dx = px - (w - radius);
                 int dy = py - (h - radius);
@@ -154,6 +163,10 @@ static void draw_rounded_rect(SDL_Surface* surface, int x, int y, int w, int h, 
             }
         }
     }
+}
+
+static void draw_rounded_rect(SDL_Surface* surface, int x, int y, int w, int h, int radius, Uint32 color) {
+    draw_rounded_rect_corners(surface, x, y, w, h, radius, CORNER_ALL, color);
 }
 
 ///////////////////////////////
@@ -553,7 +566,7 @@ static void render_notification_stack(void) {
     }
 }
 
-// Render Performance HUD (top-right overlay, compact size)
+// Render Performance HUD (flush to the top-right screen corner, compact size)
 static void render_perf_hud(void) {
     if (perf_hud_mode == PERF_HUD_OFF) return;
 
@@ -599,13 +612,20 @@ static void render_perf_hud(void) {
     int pill_h = text_h + (pill_pad_y * 2);
     int corner_radius = SCALE1(4);
 
-    int margin = SCALE1(6);
-    int hud_x = screen_width - margin - pill_w;
-    int hud_y = margin;
+    // Flush against the top and right screen edges.
+    int hud_x = screen_width - pill_w;
+    int hud_y = 0;
 
+    // The system indicator lives in the same corner (SCALE1(PADDING) inset,
+    // PILL_SIZE tall), so drop below it when it is showing instead of overlapping.
     if (system_indicator_type != SYSTEM_INDICATOR_NONE) {
-        hud_y += SCALE1(28);
+        hud_y = SCALE1(PADDING + PILL_SIZE);
     }
+
+    // Square off whichever corners sit on a screen edge; the right edge always
+    // does, the top edge only when the HUD has not been pushed down.
+    int corners = CORNER_BL;
+    if (hud_y > 0) corners |= CORNER_TL;
 
     SDL_Surface* hud_surf = SDL_CreateRGBSurfaceWithFormat(
         0, pill_w, pill_h, 32, SDL_PIXELFORMAT_ABGR8888
@@ -614,7 +634,7 @@ static void render_perf_hud(void) {
 
     SDL_FillRect(hud_surf, NULL, 0);
     Uint32 bg_color = SDL_MapRGBA(hud_surf->format, 15, 20, 26, 215);
-    draw_rounded_rect(hud_surf, 0, 0, pill_w, pill_h, corner_radius, bg_color);
+    draw_rounded_rect_corners(hud_surf, 0, 0, pill_w, pill_h, corner_radius, corners, bg_color);
 
     SDL_Color text_color = {226, 232, 240, 255};
     SDL_Surface* text_surf = TTF_RenderUTF8_Blended(f, hud_buf, text_color);
