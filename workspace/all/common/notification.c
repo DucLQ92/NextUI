@@ -2,6 +2,7 @@
 #include "defines.h"
 #include "api.h"
 #include "config.h"
+#include "utils.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -17,6 +18,29 @@
 
 // System indicator sizing (must match GFX_blitHardwareIndicator dimensions)
 #define SYS_INDICATOR_EXTRA_PAD  4   // Extra padding for indicator pill
+
+///////////////////////////////
+// Performance HUD Overlay State
+///////////////////////////////
+
+static PerfHUDMode perf_hud_mode = PERF_HUD_OFF;
+static float perf_hud_fps = 0.0f;
+static uint32_t perf_hud_last_sample = 0;
+static int perf_hud_dirty = 0;
+
+typedef struct {
+    int cpu_temp;       // °C
+    int cpu_speed_mhz;  // MHz
+    int cpu_usage_pct;  // %
+    int ram_used_mb;    // MB
+    int ram_total_mb;   // MB
+    int bat_pct;        // %
+    int bat_charging;   // 1 if charging
+} PerfHUDMetrics;
+
+static PerfHUDMetrics perf_hud_metrics = {0};
+static unsigned long long last_cpu_active = 0;
+static unsigned long long last_cpu_total = 0;
 
 ///////////////////////////////
 // Internal state
@@ -211,8 +235,87 @@ void Notification_push(NotificationType type, const char* message, SDL_Surface* 
     render_dirty = 1;
 }
 
+static void update_perf_hud_metrics(uint32_t now) {
+    if (perf_hud_mode == PERF_HUD_OFF) return;
+    if (now - perf_hud_last_sample < 500 && perf_hud_last_sample > 0) return;
+    perf_hud_last_sample = now;
+
+    // 1. CPU Temp
+    int temp = getInt("/sys/devices/virtual/thermal/thermal_zone0/temp");
+    if (temp <= 0) temp = getInt("/sys/class/thermal/thermal_zone0/temp");
+    perf_hud_metrics.cpu_temp = (temp > 0) ? (temp / 1000) : 0;
+
+    // 2. CPU Speed
+    int freq = getInt("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq");
+    perf_hud_metrics.cpu_speed_mhz = (freq > 0) ? (freq / 1000) : 0;
+
+    // 3. CPU Usage % from /proc/stat
+    FILE* fp = fopen("/proc/stat", "r");
+    if (fp) {
+        char line[256];
+        if (fgets(line, sizeof(line), fp)) {
+            unsigned long long user = 0, nice = 0, system = 0, idle = 0, iowait = 0, irq = 0, softirq = 0, steal = 0;
+            if (sscanf(line, "cpu %llu %llu %llu %llu %llu %llu %llu %llu",
+                       &user, &nice, &system, &idle, &iowait, &irq, &softirq, &steal) >= 4) {
+                unsigned long long active = user + nice + system + irq + softirq + steal;
+                unsigned long long total = active + idle + iowait;
+                if (last_cpu_total > 0 && total > last_cpu_total) {
+                    unsigned long long d_active = active - last_cpu_active;
+                    unsigned long long d_total = total - last_cpu_total;
+                    if (d_total > 0) {
+                        perf_hud_metrics.cpu_usage_pct = (int)((d_active * 100) / d_total);
+                        if (perf_hud_metrics.cpu_usage_pct > 100) perf_hud_metrics.cpu_usage_pct = 100;
+                    }
+                }
+                last_cpu_active = active;
+                last_cpu_total = total;
+            }
+        }
+        fclose(fp);
+    }
+
+    // 4. RAM Usage from /proc/meminfo
+    fp = fopen("/proc/meminfo", "r");
+    if (fp) {
+        char line[128];
+        unsigned long mem_total_kb = 0, mem_avail_kb = 0, mem_free_kb = 0, buffers_kb = 0, cached_kb = 0;
+        while (fgets(line, sizeof(line), fp)) {
+            if (sscanf(line, "MemTotal: %lu kB", &mem_total_kb) == 1) {}
+            else if (sscanf(line, "MemAvailable: %lu kB", &mem_avail_kb) == 1) {}
+            else if (sscanf(line, "MemFree: %lu kB", &mem_free_kb) == 1) {}
+            else if (sscanf(line, "Buffers: %lu kB", &buffers_kb) == 1) {}
+            else if (sscanf(line, "Cached: %lu kB", &cached_kb) == 1) {}
+        }
+        fclose(fp);
+        if (mem_total_kb > 0) {
+            perf_hud_metrics.ram_total_mb = (int)(mem_total_kb / 1024);
+            if (mem_avail_kb > 0) {
+                perf_hud_metrics.ram_used_mb = (int)((mem_total_kb - mem_avail_kb) / 1024);
+            } else {
+                perf_hud_metrics.ram_used_mb = (int)((mem_total_kb - (mem_free_kb + buffers_kb + cached_kb)) / 1024);
+            }
+        }
+    }
+
+    // 5. Battery % & Status
+    int bat_val = getInt("/tmp/percBat");
+    if (bat_val <= 0) bat_val = getInt("/sys/class/power_supply/axp2202-battery/capacity");
+    if (bat_val < 0) bat_val = 0;
+    if (bat_val > 100) bat_val = 100;
+    perf_hud_metrics.bat_pct = bat_val;
+
+    char status[32] = {0};
+    getFile("/sys/class/power_supply/axp2202-battery/status", status, sizeof(status));
+    perf_hud_metrics.bat_charging = (strstr(status, "Charging") != NULL || getInt("/tmp/is_charging") == 1);
+
+    perf_hud_dirty = 1;
+}
+
 void Notification_update(uint32_t now) {
     if (!initialized) return;
+
+    // Update Performance HUD
+    update_perf_hud_metrics(now);
     
     // Update system indicator timeout
     if (system_indicator_type != SYSTEM_INDICATOR_NONE) {
@@ -447,6 +550,84 @@ static void render_notification_stack(void) {
     }
 }
 
+// Render Performance HUD (top-right overlay, compact size)
+static void render_perf_hud(void) {
+    if (perf_hud_mode == PERF_HUD_OFF) return;
+
+    TTF_Font* f = font.micro ? font.micro : font.tiny;
+    char hud_buf[160];
+    if (perf_hud_mode == PERF_HUD_SIMPLE) {
+        snprintf(hud_buf, sizeof(hud_buf), "%.0f FPS  |  %d°C  |  CPU %d%%  |  RAM %dMB",
+                 perf_hud_fps,
+                 perf_hud_metrics.cpu_temp,
+                 perf_hud_metrics.cpu_usage_pct,
+                 perf_hud_metrics.ram_used_mb);
+    } else {
+        if (perf_hud_metrics.cpu_speed_mhz >= 1000) {
+            float ghz = (float)perf_hud_metrics.cpu_speed_mhz / 1000.0f;
+            snprintf(hud_buf, sizeof(hud_buf), "%.1f FPS  |  CPU %d%% (%.1fGHz %d°C)  |  RAM %d/%dMB  |  %d%%%s",
+                     perf_hud_fps,
+                     perf_hud_metrics.cpu_usage_pct,
+                     ghz,
+                     perf_hud_metrics.cpu_temp,
+                     perf_hud_metrics.ram_used_mb,
+                     perf_hud_metrics.ram_total_mb,
+                     perf_hud_metrics.bat_pct,
+                     perf_hud_metrics.bat_charging ? "⚡" : "");
+        } else {
+            snprintf(hud_buf, sizeof(hud_buf), "%.1f FPS  |  CPU %d%% (%dMHz %d°C)  |  RAM %d/%dMB  |  %d%%%s",
+                     perf_hud_fps,
+                     perf_hud_metrics.cpu_usage_pct,
+                     perf_hud_metrics.cpu_speed_mhz,
+                     perf_hud_metrics.cpu_temp,
+                     perf_hud_metrics.ram_used_mb,
+                     perf_hud_metrics.ram_total_mb,
+                     perf_hud_metrics.bat_pct,
+                     perf_hud_metrics.bat_charging ? "⚡" : "");
+        }
+    }
+
+    int text_w = 0, text_h = 0;
+    TTF_SizeUTF8(f, hud_buf, &text_w, &text_h);
+
+    int pill_pad_x = SCALE1(6);
+    int pill_pad_y = SCALE1(3);
+    int pill_w = text_w + (pill_pad_x * 2);
+    int pill_h = text_h + (pill_pad_y * 2);
+    int corner_radius = SCALE1(4);
+
+    int margin = SCALE1(6);
+    int hud_x = screen_width - margin - pill_w;
+    int hud_y = margin;
+
+    if (system_indicator_type != SYSTEM_INDICATOR_NONE) {
+        hud_y += SCALE1(28);
+    }
+
+    SDL_Surface* hud_surf = SDL_CreateRGBSurfaceWithFormat(
+        0, pill_w, pill_h, 32, SDL_PIXELFORMAT_ABGR8888
+    );
+    if (!hud_surf) return;
+
+    SDL_FillRect(hud_surf, NULL, 0);
+    Uint32 bg_color = SDL_MapRGBA(hud_surf->format, 15, 20, 26, 215);
+    draw_rounded_rect(hud_surf, 0, 0, pill_w, pill_h, corner_radius, bg_color);
+
+    SDL_Color text_color = {226, 232, 240, 255};
+    SDL_Surface* text_surf = TTF_RenderUTF8_Blended(f, hud_buf, text_color);
+    if (text_surf) {
+        SDL_SetSurfaceBlendMode(text_surf, SDL_BLENDMODE_BLEND);
+        SDL_Rect text_dst = {pill_pad_x, pill_pad_y, text_surf->w, text_surf->h};
+        SDL_BlitSurface(text_surf, NULL, hud_surf, &text_dst);
+        SDL_FreeSurface(text_surf);
+    }
+
+    SDL_SetSurfaceBlendMode(hud_surf, SDL_BLENDMODE_NONE);
+    SDL_Rect dst_rect = {hud_x, hud_y, pill_w, pill_h};
+    SDL_BlitSurface(hud_surf, NULL, gl_notification_surface, &dst_rect);
+    SDL_FreeSurface(hud_surf);
+}
+
 void Notification_renderToLayer(int layer) {
     (void)layer; // unused now, kept for API compatibility
     
@@ -457,6 +638,7 @@ void Notification_renderToLayer(int layer) {
     
 	int has_notifications = notification_count > 0;
 	int has_system_indicator = system_indicator_type != SYSTEM_INDICATOR_NONE;
+	int has_perf_hud = (perf_hud_mode != PERF_HUD_OFF);
 	
 	// Snapshot progress state under lock — sub-microsecond critical section.
 	// Rendering uses the snapshot so we never hold the lock during SDL calls.
@@ -467,8 +649,8 @@ void Notification_renderToLayer(int layer) {
 	
 	int has_progress_indicator = progress_snap.active;
 	
-	if (!has_notifications && !has_system_indicator && !has_progress_indicator) {
-		// When all notifications and indicators are gone, render one final transparent frame
+	if (!has_notifications && !has_system_indicator && !has_progress_indicator && !has_perf_hud) {
+		// When all notifications, indicators, and HUD are gone, render one final transparent frame
 		if (gl_notification_surface) {
 			if (needs_clear_frame) {
 				SDL_FillRect(gl_notification_surface, NULL, 0);
@@ -476,6 +658,7 @@ void Notification_renderToLayer(int layer) {
 				needs_clear_frame = 0;
 				render_dirty = 0;
 				system_indicator_dirty = 0;
+				perf_hud_dirty = 0;
 				SDL_LockMutex(progress_mutex);
 				progress_state.dirty = 0;
 				SDL_UnlockMutex(progress_mutex);
@@ -489,15 +672,16 @@ void Notification_renderToLayer(int layer) {
 		return;
 	}
 	
-	// We have notifications or indicators
+	// We have notifications, indicators, or HUD
 	needs_clear_frame = 1;
 	
 	// Check if anything changed
 	int notifications_changed = render_dirty || notification_count != last_notification_count;
 	int indicator_changed = system_indicator_dirty || system_indicator_type != last_system_indicator_type;
 	int progress_changed = progress_snap.dirty;
+	int hud_changed = has_perf_hud && perf_hud_dirty;
     
-    if (!notifications_changed && !indicator_changed && !progress_changed) {
+    if (!notifications_changed && !indicator_changed && !progress_changed && !hud_changed) {
         return;
     }
     
@@ -515,6 +699,9 @@ void Notification_renderToLayer(int layer) {
     SDL_FillRect(gl_notification_surface, NULL, 0);
     
     // Render each element type
+    if (has_perf_hud) {
+        render_perf_hud();
+    }
     if (has_system_indicator) {
         render_system_indicator();
     }
@@ -531,6 +718,7 @@ void Notification_renderToLayer(int layer) {
 	render_dirty = 0;
 	last_notification_count = notification_count;
 	system_indicator_dirty = 0;
+	perf_hud_dirty = 0;
 	last_system_indicator_type = system_indicator_type;
 	
 	// Clear dirty flag under lock — a background thread may have set it again
@@ -666,3 +854,28 @@ bool Notification_hasProgressIndicator(void) {
     SDL_UnlockMutex(progress_mutex);
     return active;
 }
+
+///////////////////////////////
+// Performance HUD Functions
+///////////////////////////////
+
+void Notification_setPerfHUDMode(PerfHUDMode mode) {
+    perf_hud_mode = mode;
+    perf_hud_dirty = 1;
+    render_dirty = 1;
+}
+
+PerfHUDMode Notification_getPerfHUDMode(void) {
+    return perf_hud_mode;
+}
+
+void Notification_togglePerfHUDMode(void) {
+    perf_hud_mode = (PerfHUDMode)((perf_hud_mode + 1) % 3);
+    perf_hud_dirty = 1;
+    render_dirty = 1;
+}
+
+void Notification_setFPS(float fps) {
+    perf_hud_fps = fps;
+}
+

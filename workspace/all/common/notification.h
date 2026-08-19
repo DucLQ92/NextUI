@@ -157,4 +157,34 @@ void Notification_setProgressIndicatorPersistent(bool persistent);
  */
 bool Notification_hasProgressIndicator(void);
 
+///////////////////////////////
+// Performance HUD Overlay (In-Game Real-Time HUD)
+///////////////////////////////
+
+typedef enum {
+    PERF_HUD_OFF = 0,
+    PERF_HUD_SIMPLE = 1,
+    PERF_HUD_DETAILED = 2,
+} PerfHUDMode;
+
+/**
+ * Set the Performance HUD display mode (OFF, SIMPLE, DETAILED).
+ */
+void Notification_setPerfHUDMode(PerfHUDMode mode);
+
+/**
+ * Get current Performance HUD mode.
+ */
+PerfHUDMode Notification_getPerfHUDMode(void);
+
+/**
+ * Cycle through Performance HUD modes (OFF -> SIMPLE -> DETAILED -> OFF).
+ */
+void Notification_togglePerfHUDMode(void);
+
+/**
+ * Pass current rendering FPS to the HUD.
+ */
+void Notification_setFPS(float fps);
+
 #endif // __NOTIFICATION_H__

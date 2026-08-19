@@ -7,6 +7,7 @@
 #include "ma_internal.h"
 #include "ma_options.h"
 #include "ma_config.h"
+#include "notification.h"
 
 static ButtonMapping button_label_mapping[] = { // used to lookup the retro_id and local btn_id from button name
 	{"NONE",	-1,								BTN_ID_NONE},
@@ -137,6 +138,10 @@ void Config_syncFrontend(char* key, int value) {
         show_debug = value;
         if (prev_show_debug != show_debug) updateCPUMonitor();
 		i = FE_OPT_DEBUG;
+	}
+	else if (exactMatch(key,config.frontend.options[FE_OPT_PERF_HUD].key)) {
+		Notification_setPerfHUDMode(value);
+		i = FE_OPT_PERF_HUD;
 	}
 	else if (exactMatch(key,config.frontend.options[FE_OPT_MAXFF].key)) {
 		max_ff_speed = value;
@@ -993,6 +998,12 @@ static char* overlay_labels[] = {
 	"None",
 	NULL
 };
+static char* perf_hud_labels[] = {
+	"Off",
+	"Simple",
+	"Detailed",
+	NULL
+};
 // static char* sharpness_labels[] = {
 // 	"Sharp",
 // 	"Crisp",
@@ -1421,6 +1432,16 @@ struct Config config = {
 				.values = onoff_labels,
 				.labels = onoff_labels,
 			},
+			[FE_OPT_PERF_HUD] = {
+				.key	= "minarch_perf_hud",
+				.name	= "Performance HUD",
+				.desc	= "Display real-time FPS, CPU load/temp, RAM, and Battery on screen during gameplay.",
+				.default_value = 0,
+				.value = 0,
+				.count = 3,
+				.values = perf_hud_labels,
+				.labels = perf_hud_labels,
+			},
 			[FE_OPT_MAXFF] = {
 				.key	= "minarch_max_ff_speed",
 				.name	= "Max FF Speed",
@@ -1717,6 +1738,7 @@ struct Config config = {
 		[SHORTCUT_HOLD_REWIND]			= {"Hold Rewind",		-1, BTN_ID_NONE, 0},
 		[SHORTCUT_GAMESWITCHER]			= {"Game Switcher",		-1, BTN_ID_NONE, 0},
 		[SHORTCUT_SCREENSHOT]           = {"Screenshot",        -1, BTN_ID_NONE, 0},
+		[SHORTCUT_TOGGLE_HUD]			= {"Toggle HUD",		-1, BTN_ID_NONE, 0},
 		// Trimui only
 		[SHORTCUT_TOGGLE_TURBO_A]		= {"Toggle Turbo A",	-1, BTN_ID_NONE, 0},
 		[SHORTCUT_TOGGLE_TURBO_B]		= {"Toggle Turbo B",	-1, BTN_ID_NONE, 0},

@@ -255,6 +255,7 @@ int main(int argc , char* argv[]) {
 	// we started in performance mode, now reset to the desired mode
 	// if the config didn't specify the desired cpu speed, the default is 0 = auto
 	setOverclock(overclock);
+	Notification_setPerfHUDMode(config.frontend.options[FE_OPT_PERF_HUD].value);
 
 	while (!quit) {
 		GFX_startFrame();
@@ -264,7 +265,8 @@ int main(int argc , char* argv[]) {
 		// Process RetroAchievements for this frame
 		RA_doFrame();
 		
-		// Update and render notifications overlay
+		// Update and render notifications and performance overlay
+		Notification_setFPS(perf.fps);
 		Notification_update(SDL_GetTicks());
 		
 		// Poll for volume/brightness/colortemp changes and show system indicators

@@ -1,5 +1,6 @@
 #include "ma_internal.h"
 #include "ma_input.h"
+#include "notification.h"
 
 #include <string.h>
 
@@ -166,6 +167,10 @@ void input_poll_callback(void) {
 					case SHORTCUT_CYCLE_EFFECT:
 						screen_effect = (screen_effect + 1) % config.frontend.options[FE_OPT_EFFECT].count;
 						Config_syncFrontend(config.frontend.options[FE_OPT_EFFECT].key, screen_effect);
+						break;
+					case SHORTCUT_TOGGLE_HUD:
+						Notification_togglePerfHUDMode();
+						config.frontend.options[FE_OPT_PERF_HUD].value = Notification_getPerfHUDMode();
 						break;
 					default: break;
 				}
