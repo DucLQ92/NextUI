@@ -848,3 +848,7 @@ Logo=Đèn Logo
 # Tools - Remove Loading
 Done=Hoàn tất
 Hoàn tất=Hoàn tất
+
+# LED Theme Sync
+LED Theme Sync=Đồng bộ LED theo bảng màu
+Sync LED color with the active palette's accent color. Also updates LedControl settings.=Đồng bộ màu LED theo màu nhấn (accent) của bảng màu đang dùng. Cũng cập nhật cài đặt LedControl.

@@ -415,6 +415,8 @@ static const char *builtin_vi[][2] = {
     {"Volume when toggled", "Âm lượng khi gạt FN"},
     {"FN switch disables LED", "Công tắc FN tắt đèn LED"},
     {"Switch will also disable LEDs", "Gạt công tắc FN sẽ đồng thời tắt toàn bộ đèn LED"},
+    {"LED Theme Sync", "Đồng bộ LED theo bảng màu"},
+    {"Sync LED color with the active palette's accent color. Also updates LedControl settings.", "Đồng bộ màu LED theo màu nhấn (accent) của bảng màu đang dùng. Cũng cập nhật cài đặt LedControl."},
     {"Brightness when toggled", "Độ sáng khi gạt FN"},
     {"Color temperature when toggled", "Nhiệt độ màu khi gạt FN"},
     {"Contrast when toggled", "Độ tương phản khi gạt FN"},

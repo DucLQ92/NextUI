@@ -65,6 +65,7 @@ void CFG_defaults(NextUISettings *cfg)
         .gameSwitcherCurtain = CFG_DEFAULT_GAMESWITCHER_CURTAIN,
 
         .muteLeds = CFG_DEFAULT_MUTELEDS,
+        .ledThemeSync = CFG_DEFAULT_LED_THEME_SYNC,
 
         .fnAction = {CFG_DEFAULT_FN_ACTION, CFG_DEFAULT_FN_ACTION, CFG_DEFAULT_FN_ACTION},
         .language = CFG_DEFAULT_LANGUAGE,
@@ -345,6 +346,11 @@ void CFG_init(FontLoad_callback_t cb, ColorSet_callback_t ccb)
             if (sscanf(line, "muteLeds=%i", &temp_value) == 1)
             {
                 CFG_setMuteLEDs(temp_value);
+                continue;
+            }
+            if (sscanf(line, "ledThemeSync=%i", &temp_value) == 1)
+            {
+                settings.ledThemeSync = (bool)temp_value;
                 continue;
             }
             if (strncmp(line, "fn1action=", 10) == 0)
@@ -639,6 +645,10 @@ void CFG_setColor(int color_id, uint32_t color)
 
     if(settings.onColorSet)
         settings.onColorSet();
+
+    // When LED Theme Sync is enabled, auto-apply accent color to LEDs whenever color2 changes
+    if (settings.ledThemeSync && color_id == 2)
+        CFG_applyLedThemeSync();
 }
 
 // Predefined color palette selection (see palette.c for enumeration/loading)
@@ -940,6 +950,80 @@ void CFG_setMuteLEDs(bool on)
 {
     settings.muteLeds = on;
     CFG_sync();
+}
+
+bool CFG_getLedThemeSync(void)
+{
+    return settings.ledThemeSync;
+}
+
+void CFG_setLedThemeSync(bool on)
+{
+    settings.ledThemeSync = on;
+    CFG_sync();
+    if (on)
+        CFG_applyLedThemeSync();
+}
+
+// Rewrite the color1/color2 fields in a ledsettings .txt file to match rgb_hex.
+// Returns 0 on success, -1 on failure.
+static int rewrite_led_colors_in_file(const char *filename, uint32_t rgb_hex)
+{
+    // Read existing file into memory
+    FILE *r = PLAT_OpenSettings(filename);
+    if (!r) return -1;
+
+    char lines[64][256];
+    int nlines = 0;
+    while (nlines < 64 && fgets(lines[nlines], sizeof(lines[nlines]), r))
+        nlines++;
+    fclose(r);
+
+    // Write back, replacing color1= and color2= values
+    FILE *w = PLAT_WriteSettings(filename);
+    if (!w) return -1;
+    for (int i = 0; i < nlines; i++) {
+        if (strncmp(lines[i], "color1=", 7) == 0)
+            fprintf(w, "color1=0x%06X\n", rgb_hex);
+        else if (strncmp(lines[i], "color2=", 7) == 0)
+            fprintf(w, "color2=0x%06X\n", rgb_hex);
+        else
+            fputs(lines[i], w);
+    }
+    fclose(w);
+    return 0;
+}
+
+void CFG_applyLedThemeSync(void)
+{
+    if (!settings.ledThemeSync) return;
+
+    // Extract RGB from accent color (color2_255 is stored as 0xRRGGBBAA)
+    uint32_t rgb_hex = (settings.color2_255 >> 8) & 0xFFFFFF;
+
+    // 1. Update in-memory lightsDefault so LEDS_updateLeds uses the new color
+    extern LightSettings lightsDefault[];
+    extern int MAX_LIGHTS;
+    char *device = getenv("DEVICE");
+    int lightsize = 3; // smartpro/s default
+    if (device) {
+        if (strstr(device, "brickpro")) lightsize = 5;
+        else if (strstr(device, "brick")) lightsize = 4;
+    }
+    for (int i = 0; i < lightsize; i++) {
+        lightsDefault[i].color1 = rgb_hex;
+        lightsDefault[i].color2 = rgb_hex;
+        PLAT_setLedColor(&lightsDefault[i]);
+    }
+
+    // 2. Persist to ledsettings.txt (and variants) so LedControl stays in sync
+    char *device2 = getenv("DEVICE");
+    if (device2 && strstr(device2, "brickpro"))
+        rewrite_led_colors_in_file("ledsettings_brickpro.txt", rgb_hex);
+    else if (device2 && strstr(device2, "brick"))
+        rewrite_led_colors_in_file("ledsettings_brick.txt", rgb_hex);
+    else
+        rewrite_led_colors_in_file("ledsettings.txt", rgb_hex);
 }
 
 const char* CFG_getFnAction(int index)
@@ -1649,6 +1733,7 @@ void CFG_sync(void)
     fprintf(file, "stateFormat=%i\n", settings.stateFormat);
     fprintf(file, "useExtractedFileName=%i\n", settings.useExtractedFileName);
     fprintf(file, "muteLeds=%i\n", settings.muteLeds);
+    fprintf(file, "ledThemeSync=%i\n", settings.ledThemeSync);
     fprintf(file, "fn1action=%s\n", settings.fnAction[0]);
     fprintf(file, "fn2action=%s\n", settings.fnAction[1]);
     fprintf(file, "fn3action=%s\n", settings.fnAction[2]);

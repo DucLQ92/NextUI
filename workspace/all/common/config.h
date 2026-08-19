@@ -144,6 +144,9 @@ typedef struct
 	// Mute switch
 	bool muteLeds;
 
+	// LED Theme Sync
+	bool ledThemeSync; // sync LED color with palette accent color
+
 	// User-assignable buttons (see BTN_FN1/BTN_FN2/BTN_FN3 in platform.h).
 	// Action strings, "" == unassigned. See CFG_getFnAction().
 	char fnAction[FN_BUTTON_COUNT][256];
@@ -238,6 +241,7 @@ typedef struct
 #define CFG_DEFAULT_STATEFORMAT STATE_FORMAT_SAV
 #define CFG_DEFAULT_EXTRACTEDFILENAME false
 #define CFG_DEFAULT_MUTELEDS false
+#define CFG_DEFAULT_LED_THEME_SYNC false
 #define CFG_DEFAULT_FN_ACTION "" // unassigned
 #define CFG_DEFAULT_GAMEARTWIDTH 0.45
 #define CFG_DEFAULT_WIFI false
@@ -387,6 +391,11 @@ void CFG_setUseExtractedFileName(bool);
 // Enable/disable mute also shutting off LEDs.
 bool CFG_getMuteLEDs(void);
 void CFG_setMuteLEDs(bool);
+// Sync all LED colors with the active palette's accent color (color2).
+// When enabled, changing palette updates LED hardware and ledsettings.txt simultaneously.
+bool CFG_getLedThemeSync(void);
+void CFG_setLedThemeSync(bool);
+void CFG_applyLedThemeSync(void); // apply accent color → LEDs + ledsettings.txt
 // The action bound to a user-assignable button, where `index` is 0 (FN1), 1 (FN2) or
 // 2 (FN3, the "HOME" button).
 // The value is a "<kind>:<arg>" action string so more kinds can be added later without
