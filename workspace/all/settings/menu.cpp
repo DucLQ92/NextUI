@@ -198,6 +198,7 @@ InputReactionHint MenuItem::handleInput(int &dirty)
         hint = submenu->handleInput(dirty, subMenuJustClosed);
         if (subMenuJustClosed) {
             defer(false);
+            initSelection(); // re-sync valueIdx from on_get() (e.g. language changed via submenu)
             dirty = 1;
         }
         return hint;
