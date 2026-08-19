@@ -469,7 +469,7 @@ int main(int argc, char *argv[])
             []() -> std::any { return CFG_getShowGameArt(); },
             [](const std::any &value) { CFG_setShowGameArt(std::any_cast<bool>(value)); },
             []() { CFG_setShowGameArt(CFG_DEFAULT_SHOWGAMEART);}});
-        appearanceItems.push_back(new MenuItem{ListItemType::Generic, "Use folder background for ROMs", "If enabled, used the emulator background image. Otherwise uses the default.", {false, true}, on_off,
+        appearanceItems.push_back(new MenuItem{ListItemType::Generic, "Use folder background for ROMs", "If enabled, uses the emulator background image.\nOtherwise uses the default.", {false, true}, on_off,
             []() -> std::any { return CFG_getRomsUseFolderBackground(); },
             [](const std::any &value) { CFG_setRomsUseFolderBackground(std::any_cast<bool>(value)); },
             []() { CFG_setRomsUseFolderBackground(CFG_DEFAULT_ROMSUSEFOLDERBACKGROUND);}});
@@ -604,11 +604,11 @@ int main(int argc, char *argv[])
             { return CFG_getScreenTimeoutSecs(); }, [](const std::any &value)
             { CFG_setScreenTimeoutSecs(std::any_cast<uint32_t>(value)); },
             []() { CFG_setScreenTimeoutSecs(CFG_DEFAULT_SCREENTIMEOUTSECS);}},
-            new MenuItem{ListItemType::Generic, "Suspend timeout", "Time before device goes to sleep after screen is off (5-600s)", sleep_timeout_secs, sleep_timeout_labels, []() -> std::any
+            new MenuItem{ListItemType::Generic, "Suspend timeout", "Time before device goes to sleep\nafter screen is off (5-600s)", sleep_timeout_secs, sleep_timeout_labels, []() -> std::any
             { return CFG_getSuspendTimeoutSecs(); }, [](const std::any &value)
             { CFG_setSuspendTimeoutSecs(std::any_cast<uint32_t>(value)); },
             []() { CFG_setSuspendTimeoutSecs(CFG_DEFAULT_SUSPENDTIMEOUTSECS);}},
-            new MenuItem{ListItemType::Generic, "Haptic feedback", "Enable or disable haptic feedback on certain actions in the OS", {false, true}, on_off, []() -> std::any
+            new MenuItem{ListItemType::Generic, "Haptic feedback", "Enable or disable haptic feedback\non certain actions in the OS", {false, true}, on_off, []() -> std::any
             { return CFG_getHaptics(); }, [](const std::any &value)
             { CFG_setHaptics(std::any_cast<bool>(value)); },
             []() { CFG_setHaptics(CFG_DEFAULT_HAPTICS);}},
@@ -674,7 +674,7 @@ int main(int argc, char *argv[])
         if(deviceInfo.hasActiveCooling())
         {
             systemItems.push_back(
-                new MenuItem{ListItemType::Generic, "Fan Speed", "Select the fan speed percentage (Quiet/Normal/Performance or 0-100%)",
+                new MenuItem{ListItemType::Generic, "Fan Speed", "Select the fan speed percentage\n(Quiet/Normal/Performance or 0-100%)",
                 {-3,-2,-1,0,10,20,30,40,50,60,70,80,90,100}, {"Performance","Normal","Quiet","0%","10%","20%","30%","40%","50%","60%","70%","80%","90%","100%"},
                 []() -> std::any { return GetFanSpeed(); },
                 [](const std::any &value){ SetFanSpeed(std::any_cast<int>(value)); },
