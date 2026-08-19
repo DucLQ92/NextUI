@@ -491,6 +491,10 @@ int main(int argc, char *argv[])
         // [](const std::any &value)
         // { CFG_setGameSwitcherScaling(std::any_cast<int>(value)); },
         // []() { CFG_setGameSwitcherScaling(CFG_DEFAULT_GAMESWITCHERSCALING);}},
+        appearanceItems.push_back(new MenuItem{ListItemType::Generic, "LED Theme Sync", "Sync LED color with the active palette's accent color. Also updates LedControl settings.", {false, true}, on_off,
+            []() -> std::any { return CFG_getLedThemeSync(); },
+            [](const std::any &value) { CFG_setLedThemeSync(std::any_cast<bool>(value)); },
+            []() { CFG_setLedThemeSync(CFG_DEFAULT_LED_THEME_SYNC); }});
         appearanceItems.push_back(new MenuItem{ListItemType::Button, "Reset to defaults", "Resets all options in this menu to their default values.", ResetCurrentMenu});
         auto *appearanceMenu = new MenuList(MenuItemType::Fixed, "Appearance", std::move(appearanceItems));
 
@@ -699,10 +703,6 @@ int main(int argc, char *argv[])
             []() -> std::any { return CFG_getMuteLEDs(); },
             [](const std::any &value) { CFG_setMuteLEDs(std::any_cast<bool>(value)); },
             []() { CFG_setMuteLEDs(CFG_DEFAULT_MUTELEDS); }},
-            new MenuItem{ListItemType::Generic, "LED Theme Sync", "Sync LED color with the active palette's accent color. Also updates LedControl settings.", {false, true}, on_off,
-            []() -> std::any { return CFG_getLedThemeSync(); },
-            [](const std::any &value) { CFG_setLedThemeSync(std::any_cast<bool>(value)); },
-            []() { CFG_setLedThemeSync(CFG_DEFAULT_LED_THEME_SYNC); }},
             new MenuItem{ListItemType::Generic, "Brightness when toggled", "Display brightness (0 to 10)",
             {(int)SETTINGS_DEFAULT_MUTE_NO_CHANGE, 0,1,2,3,4,5,6,7,8,9,10},
             {"Unchanged","0","1","2","3","4","5","6","7","8","9","10"},
