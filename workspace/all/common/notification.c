@@ -218,7 +218,10 @@ void Notification_push(NotificationType type, const char* message, SDL_Surface* 
     // Add new notification at end of queue
     Notification* n = &notifications[notification_count];
     n->type = type;
-    strncpy(n->message, message, NOTIFICATION_MAX_MESSAGE - 1);
+    // translate once at push time: message is never routed through _() again before
+    // being rendered, so untranslated static notifications (eg. "Screenshot saved")
+    // would otherwise always show in English regardless of the active language.
+    strncpy(n->message, _(message), NOTIFICATION_MAX_MESSAGE - 1);
     n->message[NOTIFICATION_MAX_MESSAGE - 1] = '\0';
     n->icon = icon;
     n->start_time = SDL_GetTicks();

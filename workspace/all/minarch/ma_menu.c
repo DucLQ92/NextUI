@@ -1395,11 +1395,18 @@ int Menu_options(MenuList* list) {
 		}
 		
 		if (!desc && list->desc) desc = _(list->desc);
-		
+
 		if (desc) {
 			int w,h;
-			GFX_sizeText(font.tiny, desc, SCALE1(12), &w,&h);
-			GFX_blitText(font.tiny, desc, SCALE1(12), COLOR_WHITE, screen, &(SDL_Rect){
+			// copy before wrapping: `desc` may point straight into the i18n hash
+			// table (or, for English, into a read-only string literal), and
+			// GFX_wrapText writes '\n' into the buffer in place.
+			char desc_buf[512];
+			strncpy(desc_buf, desc, sizeof(desc_buf) - 1);
+			desc_buf[sizeof(desc_buf) - 1] = '\0';
+			GFX_wrapText(font.tiny, desc_buf, screen->w - SCALE1(2*PADDING), 2);
+			GFX_sizeText(font.tiny, desc_buf, SCALE1(12), &w,&h);
+			GFX_blitText(font.tiny, desc_buf, SCALE1(12), COLOR_WHITE, screen, &(SDL_Rect){
 				(screen->w - w) / 2,
 				screen->h - SCALE1(PADDING) - h,
 				w,h
