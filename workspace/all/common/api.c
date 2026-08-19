@@ -4682,8 +4682,25 @@ void LEDS_applyThemeColor(uint32_t rgb_hex)
 	for (int i = 0; i < lightsize; i++) {
 		lightsDefault[i].color1 = rgb_hex;
 		lightsDefault[i].color2 = rgb_hex;
-		PLAT_setLedColor(&lightsDefault[i]);
 	}
+
+	// Only push straight to hardware when LIGHT_PROFILE_DEFAULT is actually the
+	// profile currently driving the LEDs. Charging/low-battery/critical-battery/
+	// muted/sleep/ambient all take priority over it (see LEDS_applyRules), and
+	// poking the hardware here regardless would momentarily stomp on whatever
+	// indicator is showing, only for the next rules tick to revert it -- which
+	// is what made the synced color look wrong/inconsistent. lightsDefault is
+	// already updated above, so it picks up the new color on its own the next
+	// time LEDS_applyRules() switches back to it.
+	//
+	// And when default *is* active, go through the real apply sequence
+	// (LEDS_updateLeds) instead of a bare PLAT_setLedColor: on trimui devices
+	// the color write alone doesn't latch anything -- PLAT_setLedEffect is what
+	// actually commits it to the LED controller -- which is why the previous
+	// color1-only poke could sit invisible until something else refreshed the
+	// LEDs later.
+	if (lights == &lightsDefault)
+		LEDS_updateLeds(false);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////

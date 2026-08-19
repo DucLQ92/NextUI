@@ -606,7 +606,15 @@ void MenuList::draw(SDL_Surface *surface, const SDL_Rect &dst, const SDL_Rect &d
         if (cur && cur->getDesc().length() > 0)
         {
             int w, h;
-            const char *description = _(cur->getDesc().c_str());
+            // copy into a mutable buffer: GFX_wrapText writes '\n' in place, and
+            // `description` would otherwise point straight into the i18n hash table's
+            // (or the MenuItem's) storage, corrupting it for later draws.
+            char description[512];
+            strncpy(description, _(cur->getDesc().c_str()), sizeof(description) - 1);
+            description[sizeof(description) - 1] = '\0';
+            // auto-wrap to the available width instead of relying on hand-placed '\n'
+            // in the source/translated strings, which don't scale across languages/screens.
+            GFX_wrapText(font.tiny, description, dst.w - SCALE1(PADDING * 2), 2);
             GFX_sizeText(font.tiny, description, SCALE1(FONT_SMALL), &w, &h);
             GFX_blitTextCPP(font.tiny, description, SCALE1(FONT_SMALL), uintToColour(THEME_COLOR4_255), surface, {(dst.x + dst.w - w) / 2, dst.y + dst.h - h, w, h});
         }

@@ -852,3 +852,88 @@ Hoàn tất=Hoàn tất
 # LED Theme Sync
 LED Theme Sync=Đồng bộ LED theo bảng màu
 Sync LED color with the active palette's accent color. Also updates LedControl settings.=Đồng bộ màu LED theo màu nhấn (accent) của bảng màu đang dùng. Cũng cập nhật cài đặt LedControl.
+
+# i18n audit additions (2026-08-19) -- previously untranslated UI strings
+# Screen/suspend timeout dropdown
+Never=Không bao giờ
+# Game art scaling mode
+Fill=Lấp đầy
+# Game art scaling mode
+Fit=Vừa khung hình
+# Menu transition style
+Comfy=Êm dịu
+# Menu transition style
+Snappy=Nhanh gọn
+# Input prompt style: rendered text
+Text=Chữ
+# Input prompt style: cardinal direction icons
+Cardinals=Hướng
+# Input prompt style: PlayStation-style shape icons
+Shapes=Hình dạng
+# RA sort order
+Unlocked First=Đã mở khóa trước
+# RA sort order
+Display Order (First)=Thứ tự hiển thị (Đầu)
+# RA sort order
+Display Order (Last)=Thứ tự hiển thị (Cuối)
+# RA sort order
+Won By (Most)=Số người đạt (Nhiều nhất)
+# RA sort order
+Won By (Least)=Số người đạt (Ít nhất)
+# RA sort order
+Points (Most)=Điểm (Nhiều nhất)
+# RA sort order
+Points (Least)=Điểm (Ít nhất)
+# RA sort order
+Title (A-Z)=Tên (A-Z)
+# RA sort order
+Title (Z-A)=Tên (Z-A)
+# RA sort order
+Type (Asc)=Loại (Tăng dần)
+# RA sort order
+Type (Desc)=Loại (Giảm dần)
+Show "Recently Played" menu entry in game list.=Hiển thị mục "Đã chơi gần đây" trong danh sách trò chơi.
+Show "Tools" menu entry in game list.=Hiển thị mục "Công cụ" trong danh sách trò chơi.
+# corrected-grammar variant of an already-translated string
+If enabled, uses the emulator background image.\nOtherwise uses the default.=Dùng ảnh nền riêng của từng hệ máy\nthay vì ảnh nền mặc định.
+# Language submenu title
+Language=Ngôn ngữ
+# wrapped variant of an already-translated string
+Time before device goes to sleep\nafter screen is off (5-600s)=Thời gian trước khi máy vào chế độ ngủ\nsau khi tắt màn hình (5-600 giây)
+# wrapped variant of an already-translated string
+Enable or disable haptic feedback\non certain actions in the OS=Bật hoặc tắt rung phản hồi\ncho các thao tác trong hệ thống
+Bypasses the stock shutdown procedure to avoid the "limbo bug".\nInstructs the PMIC directly to soft disconnect the battery.=Bỏ qua quy trình tắt máy gốc để tránh lỗi "limbo bug".\nRa lệnh cho PMIC ngắt pin trực tiếp một cách an toàn.
+# wrapped variant of an already-translated string
+Select the fan speed percentage\n(Quiet/Normal/Performance or 0-100%)=Chọn mức tốc độ quạt\n(Yên tĩnh / Bình thường / Hiệu năng hoặc 0-100%)
+# RA username/password placeholder
+(not set)=(chưa đặt)
+Error: Username and password required=Lỗi: Cần nhập tên đăng nhập và mật khẩu
+Authenticating...=Đang xác thực...
+Cancelling sync...=Đang hủy đồng bộ...
+Sync cancelled=Đã hủy đồng bộ
+BusyBox version not found.=Không tìm thấy phiên bản BusyBox.
+# adjacent string-literal concatenation in source -> single key
+Stock OS changes detected.\nThis may cause instability or issues.\nIf you experience problems, please consider\nreverting to clean stock firmware.=Phát hiện thay đổi trên hệ điều hành gốc.\nĐiều này có thể gây mất ổn định hoặc lỗi.\nNếu gặp sự cố, bạn nên cân nhắc\nquay lại firmware gốc nguyên bản.
+# About screen OS/BusyBox version fallback
+Unknown=Không xác định
+# Submenu title
+FN Switch=Gạt FN
+# Root menu identifier
+Main=Chính
+# case mismatch vs existing 'WiFi' key -- quick-action entry uses 'Wifi'
+Wifi=Wi-Fi
+# quick-action entry (distinct from existing all-caps 'SLEEP' hint key)
+Sleep=Ngủ
+# quick-action entry
+Reboot=Khởi động lại
+# quick-action entry
+Poweroff=Tắt nguồn
+No achievements found for this game.\n\nThis ROM may need a compatibility patch\nor may not be a supported version.\n\nVisit retroachievements.org to check\nsupported game files.=Không tìm thấy thành tựu nào cho trò chơi này.\n\nROM này có thể cần bản vá tương thích\nhoặc không phải phiên bản được hỗ trợ.\n\nTruy cập retroachievements.org để kiểm tra\ndanh sách game được hỗ trợ.
+No achievements available for this game.\n\nThis game may not have achievements yet.\n\nVisit retroachievements.org for details.=Trò chơi này chưa có thành tựu.\n\nGame có thể chưa được thêm thành tựu.\n\nTruy cập retroachievements.org để biết thêm chi tiết.
+Failed to load achievements=Không thể tải danh sách thành tựu
+Achievement list not available=Danh sách thành tựu không khả dụng
+No achievements found=Không tìm thấy thành tựu nào
+Pairing...=Đang ghép nối...
+Forget this device.=Quên thiết bị này.
+Connect this device.=Kết nối thiết bị này.
+Disconnect this device.=Ngắt kết nối thiết bị này.

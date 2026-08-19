@@ -49,16 +49,25 @@ static void unescape_string(char *dst, const char *src) {
 }
 
 static void hash_insert(const char *key, const char *value) {
-    unsigned long idx = hash_string(key);
-    
+    // Unescape the key too, not just the value: a key containing a literal
+    // "\n" (used by multi-line descriptions) must become a real newline here,
+    // because that's what callers pass to tr() at runtime (a C string literal
+    // with an actual newline byte). Without this, keys loaded from a .lang
+    // file could never match those lookups and silently stayed untranslated.
+    char *key_buf = malloc(strlen(key) + 1);
+    unescape_string(key_buf, key);
+
+    unsigned long idx = hash_string(key_buf);
+
     // Check if key already exists, replace value
     HashNode *node = table[idx];
     while (node) {
-        if (strcmp(node->key, key) == 0) {
+        if (strcmp(node->key, key_buf) == 0) {
             free(node->value);
             char *buf = malloc(strlen(value) + 1);
             unescape_string(buf, value);
             node->value = buf;
+            free(key_buf);
             return;
         }
         node = node->next;
@@ -66,7 +75,7 @@ static void hash_insert(const char *key, const char *value) {
 
     // Allocate new node
     node = (HashNode *)malloc(sizeof(HashNode));
-    node->key = strdup(key);
+    node->key = key_buf;
     char *buf = malloc(strlen(value) + 1);
     unescape_string(buf, value);
     node->value = buf;
@@ -1001,6 +1010,58 @@ static const char *builtin_vi[][2] = {
     // Tools - Remove Loading
     {"Done", "Hoàn tất"},
     {"Hoàn tất", "Hoàn tất"},
+
+    // i18n audit additions (2026-08-19) -- previously untranslated UI strings
+    {"Never", "Không bao giờ"},
+    {"Fill", "Lấp đầy"},
+    {"Fit", "Vừa khung hình"},
+    {"Comfy", "Êm dịu"},
+    {"Snappy", "Nhanh gọn"},
+    {"Text", "Chữ"},
+    {"Cardinals", "Hướng"},
+    {"Shapes", "Hình dạng"},
+    {"Unlocked First", "Đã mở khóa trước"},
+    {"Display Order (First)", "Thứ tự hiển thị (Đầu)"},
+    {"Display Order (Last)", "Thứ tự hiển thị (Cuối)"},
+    {"Won By (Most)", "Số người đạt (Nhiều nhất)"},
+    {"Won By (Least)", "Số người đạt (Ít nhất)"},
+    {"Points (Most)", "Điểm (Nhiều nhất)"},
+    {"Points (Least)", "Điểm (Ít nhất)"},
+    {"Title (A-Z)", "Tên (A-Z)"},
+    {"Title (Z-A)", "Tên (Z-A)"},
+    {"Type (Asc)", "Loại (Tăng dần)"},
+    {"Type (Desc)", "Loại (Giảm dần)"},
+    {"Show \"Recently Played\" menu entry in game list.", "Hiển thị mục \"Đã chơi gần đây\" trong danh sách trò chơi."},
+    {"Show \"Tools\" menu entry in game list.", "Hiển thị mục \"Công cụ\" trong danh sách trò chơi."},
+    {"If enabled, uses the emulator background image.\nOtherwise uses the default.", "Dùng ảnh nền riêng của từng hệ máy\nthay vì ảnh nền mặc định."},
+    {"Language", "Ngôn ngữ"},
+    {"Time before device goes to sleep\nafter screen is off (5-600s)", "Thời gian trước khi máy vào chế độ ngủ\nsau khi tắt màn hình (5-600 giây)"},
+    {"Enable or disable haptic feedback\non certain actions in the OS", "Bật hoặc tắt rung phản hồi\ncho các thao tác trong hệ thống"},
+    {"Bypasses the stock shutdown procedure to avoid the \"limbo bug\".\nInstructs the PMIC directly to soft disconnect the battery.", "Bỏ qua quy trình tắt máy gốc để tránh lỗi \"limbo bug\".\nRa lệnh cho PMIC ngắt pin trực tiếp một cách an toàn."},
+    {"Select the fan speed percentage\n(Quiet/Normal/Performance or 0-100%)", "Chọn mức tốc độ quạt\n(Yên tĩnh / Bình thường / Hiệu năng hoặc 0-100%)"},
+    {"(not set)", "(chưa đặt)"},
+    {"Error: Username and password required", "Lỗi: Cần nhập tên đăng nhập và mật khẩu"},
+    {"Authenticating...", "Đang xác thực..."},
+    {"Cancelling sync...", "Đang hủy đồng bộ..."},
+    {"Sync cancelled", "Đã hủy đồng bộ"},
+    {"BusyBox version not found.", "Không tìm thấy phiên bản BusyBox."},
+    {"Stock OS changes detected.\nThis may cause instability or issues.\nIf you experience problems, please consider\nreverting to clean stock firmware.", "Phát hiện thay đổi trên hệ điều hành gốc.\nĐiều này có thể gây mất ổn định hoặc lỗi.\nNếu gặp sự cố, bạn nên cân nhắc\nquay lại firmware gốc nguyên bản."},
+    {"Unknown", "Không xác định"},
+    {"FN Switch", "Gạt FN"},
+    {"Main", "Chính"},
+    {"Wifi", "Wi-Fi"},
+    {"Sleep", "Ngủ"},
+    {"Reboot", "Khởi động lại"},
+    {"Poweroff", "Tắt nguồn"},
+    {"No achievements found for this game.\n\nThis ROM may need a compatibility patch\nor may not be a supported version.\n\nVisit retroachievements.org to check\nsupported game files.", "Không tìm thấy thành tựu nào cho trò chơi này.\n\nROM này có thể cần bản vá tương thích\nhoặc không phải phiên bản được hỗ trợ.\n\nTruy cập retroachievements.org để kiểm tra\ndanh sách game được hỗ trợ."},
+    {"No achievements available for this game.\n\nThis game may not have achievements yet.\n\nVisit retroachievements.org for details.", "Trò chơi này chưa có thành tựu.\n\nGame có thể chưa được thêm thành tựu.\n\nTruy cập retroachievements.org để biết thêm chi tiết."},
+    {"Failed to load achievements", "Không thể tải danh sách thành tựu"},
+    {"Achievement list not available", "Danh sách thành tựu không khả dụng"},
+    {"No achievements found", "Không tìm thấy thành tựu nào"},
+    {"Pairing...", "Đang ghép nối..."},
+    {"Forget this device.", "Quên thiết bị này."},
+    {"Connect this device.", "Kết nối thiết bị này."},
+    {"Disconnect this device.", "Ngắt kết nối thiết bị này."},
 
     {NULL, NULL}
 };
