@@ -629,7 +629,7 @@ void LEDS_setProfile(int profile); // enum LightProfile
 // reapplies the current led config. This should only be necessary
 // if youre directly modifying the LightSettings structure.
 void LEDS_updateLeds(bool indicator_only);
-// Apply an RGB accent color (0xRRGGBB) to all LED zones in lightsDefault.
+// Apply an RGB theme color (0xRRGGBB) to all LED zones in lightsDefault.
 // Used by the LED Theme Sync feature.
 void LEDS_applyThemeColor(uint32_t rgb_hex);
 

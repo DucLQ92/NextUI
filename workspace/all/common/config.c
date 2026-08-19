@@ -646,8 +646,8 @@ void CFG_setColor(int color_id, uint32_t color)
     if(settings.onColorSet)
         settings.onColorSet();
 
-    // When LED Theme Sync is enabled, auto-apply accent color to LEDs whenever color2 changes
-    if (settings.ledThemeSync && color_id == 2)
+    // When LED Theme Sync is enabled, auto-apply the main color to LEDs whenever color1 changes
+    if (settings.ledThemeSync && color_id == 1)
         CFG_applyLedThemeSync();
 }
 
@@ -1006,8 +1006,8 @@ void CFG_applyLedThemeSync(void)
 {
     if (!settings.ledThemeSync) return;
 
-    // Extract RGB from accent color (color2_255 is stored as 0xRRGGBBAA)
-    uint32_t rgb_hex = (settings.color2_255 >> 8) & 0xFFFFFF;
+    // Extract RGB from the theme's main color (color1_255 is stored as 0xRRGGBBAA)
+    uint32_t rgb_hex = (settings.color1_255 >> 8) & 0xFFFFFF;
 
     // 1. Call the platform callback (registered from api.c) to update LED hardware
     if (settings.onLedThemeSync)
