@@ -4667,7 +4667,7 @@ int LEDS_getProfileOverride()
 	return profile_override[profile_override_top];
 }
 
-// Apply accent color from LED Theme Sync to all LEDs in lightsDefault.
+// Apply the main theme color from LED Theme Sync to all LEDs in lightsDefault.
 // Called by CFG_applyLedThemeSync via the registered callback.
 void LEDS_applyThemeColor(uint32_t rgb_hex)
 {

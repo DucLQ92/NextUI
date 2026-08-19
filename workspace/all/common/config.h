@@ -18,7 +18,7 @@ extern uint32_t THEME_COLOR7_255;
 
 typedef int (*FontLoad_callback_t)(const char* path);
 typedef int (*ColorSet_callback_t)(void);
-// Called by CFG_applyLedThemeSync with the RGB accent color (0xRRGGBB, no alpha).
+// Called by CFG_applyLedThemeSync with the RGB main theme color (0xRRGGBB, no alpha).
 // Register in api.c via CFG_setLedThemeSyncCallback to perform LED+file update.
 typedef void (*LedThemeSync_callback_t)(uint32_t rgb_hex);
 
@@ -151,7 +151,7 @@ typedef struct
 	bool muteLeds;
 
 	// LED Theme Sync
-	bool ledThemeSync; // sync LED color with palette accent color
+	bool ledThemeSync; // sync LED color with the palette's main color
 
 	// User-assignable buttons (see BTN_FN1/BTN_FN2/BTN_FN3 in platform.h).
 	// Action strings, "" == unassigned. See CFG_getFnAction().
@@ -397,11 +397,11 @@ void CFG_setUseExtractedFileName(bool);
 // Enable/disable mute also shutting off LEDs.
 bool CFG_getMuteLEDs(void);
 void CFG_setMuteLEDs(bool);
-// Sync all LED colors with the active palette's accent color (color2).
+// Sync all LED colors with the active palette's main color (color1).
 // When enabled, changing palette updates LED hardware and ledsettings.txt simultaneously.
 bool CFG_getLedThemeSync(void);
 void CFG_setLedThemeSync(bool);
-void CFG_applyLedThemeSync(void); // apply accent color → LEDs + ledsettings.txt
+void CFG_applyLedThemeSync(void); // apply main color → LEDs + ledsettings.txt
 // Register the platform callback that performs the actual LED hardware + file update.
 void CFG_setLedThemeSyncCallback(LedThemeSync_callback_t cb);
 // The action bound to a user-assignable button, where `index` is 0 (FN1), 1 (FN2) or

@@ -432,7 +432,7 @@ int main(int argc, char *argv[])
         appearanceItems.push_back(buildPaletteMenuItem());
         for (auto *item : colorMenuItems)
             appearanceItems.push_back(item);
-        appearanceItems.push_back(new MenuItem{ListItemType::Generic, "LED Theme Sync", "Sync LED color with the active palette's accent color. Also updates LedControl settings.", {false, true}, on_off,
+        appearanceItems.push_back(new MenuItem{ListItemType::Generic, "LED Theme Sync", "Sync LED color with the active palette's main color. Also updates LedControl settings.", {false, true}, on_off,
             []() -> std::any { return CFG_getLedThemeSync(); },
             [](const std::any &value) { CFG_setLedThemeSync(std::any_cast<bool>(value)); },
             []() { CFG_setLedThemeSync(CFG_DEFAULT_LED_THEME_SYNC); }});
