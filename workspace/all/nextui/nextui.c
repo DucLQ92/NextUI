@@ -2760,6 +2760,10 @@ int main (int argc, char *argv[]) {
 							//SDL_BlitSurface(bmp, NULL, screen, &destRect);
 
 							GFX_blitSurfaceColor(bmp, NULL, screen, &destRect, icon_color);
+							// this runs on every redraw of the menu, so the icon surface
+							// has to go back with it -- otherwise each repaint leaks one
+							// surface per quick action.
+							SDL_FreeSurface(bmp);
 						}
 
 						int w, h;
@@ -2879,7 +2883,9 @@ int main (int argc, char *argv[]) {
 						// lotta memory churn here
 
 						SDL_Surface* bmp = IMG_Load(preview_path);
-						SDL_Surface* raw_preview = SDL_ConvertSurfaceFormat(bmp, screen->format->format, 0);
+						// guard the convert like the quick-action icon path does: a missing
+						// or unreadable preview leaves bmp NULL here.
+						SDL_Surface* raw_preview = bmp ? SDL_ConvertSurfaceFormat(bmp, screen->format->format, 0) : NULL;
 						if (raw_preview) {
 							SDL_FreeSurface(bmp);
 							bmp = raw_preview;

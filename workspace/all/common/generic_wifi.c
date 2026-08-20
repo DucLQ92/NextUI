@@ -196,7 +196,12 @@ int PLAT_wifiScan(struct WIFI_network *networks, int max)
         network->rssi = -1;
         network->security = SECURITY_NONE;
 
-        int parsed = sscanf(line, "%17[0-9a-fA-F:]\t%d\t%d\t%127[^\t]\t%127[^\n]",
+        // NOTE: the SSID field width must stay in sync with SSID_MAX (network->ssid
+        // is char[SSID_MAX]). wpa_supplicant escapes non-printable/non-ASCII bytes as
+        // \xNN, so a 32-byte SSID can arrive as up to 128 characters — a wider
+        // conversion here overflows the field and corrupts the rest of the struct
+        // (and, on the last array slot, memory past the caller's buffer).
+        int parsed = sscanf(line, "%17[0-9a-fA-F:]\t%d\t%d\t%127[^\t]\t%63[^\n]",
                             network->bssid, &network->freq, &network->rssi,
                             features, network->ssid);
 
