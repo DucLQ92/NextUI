@@ -4682,6 +4682,24 @@ void LEDS_applyThemeColor(uint32_t rgb_hex)
 	for (int i = 0; i < lightsize; i++) {
 		lightsDefault[i].color1 = rgb_hex;
 		lightsDefault[i].color2 = rgb_hex;
+
+		// The sleep and off profiles are snapshots of lightsDefault taken once in
+		// LEDS_initLeds() and, unlike the battery/charging profiles, they never
+		// assign a colour of their own -- they are meant to follow the default
+		// one. Without re-tinting them here they keep whatever colour
+		// ledsettings.txt happened to hold at startup, so sleeping the device
+		// visibly dropped the LEDs back to the pre-sync colour (breathing it five
+		// times before going dark) and waking showed that stale colour until
+		// LEDS_applyRules switched back to default.
+		//
+		// Deliberately NOT touched: lightsLowBattery / lightsCriticalBattery /
+		// lightsCharging own their colours (red / red / green) because those
+		// encode status, and lightsAmbient, which GFX_setAmbientColor rewrites
+		// from the screen contents anyway.
+		lightsSleep[i].color1 = rgb_hex;
+		lightsSleep[i].color2 = rgb_hex;
+		lightsOff[i].color1 = rgb_hex;
+		lightsOff[i].color2 = rgb_hex;
 	}
 
 	// Only push straight to hardware when LIGHT_PROFILE_DEFAULT is actually the
