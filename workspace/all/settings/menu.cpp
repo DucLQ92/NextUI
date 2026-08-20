@@ -674,8 +674,13 @@ void MenuList::drawListItem(SDL_Surface *surface, const SDL_Rect &dst, const Abs
         text_color = uintToColour(THEME_COLOR5_255);
     }
     text = TTF_RenderUTF8_Blended(font.small, name, text_color);
-    SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y  + ((dst.h - text->h) / 2)});
-    SDL_FreeSurface(text);
+    // SDL_ttf 2.0.13 returns NULL for a zero-width string ("Text has zero width"),
+    // and the blit below reads text->h to centre itself. Draw nothing rather than
+    // dereference NULL when a name ends up empty.
+    if (text) {
+        SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y  + ((dst.h - text->h) / 2)});
+        SDL_FreeSurface(text);
+    }
 }
 
 void MenuList::drawFixed(SDL_Surface *surface, const SDL_Rect &dst, const SDL_Rect &dstTitle)
@@ -766,7 +771,8 @@ void MenuList::drawFixedItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
             char hexLabel[12];
             snprintf(hexLabel, sizeof(hexLabel), "0x%08X", rawColor);
             text = TTF_RenderUTF8_Blended(font.tiny, hexLabel, text_color_value);
-            SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + mw - text->w - SCALE1(OPTION_PADDING + COLOR_PADDING + FONT_TINY), dst.y + ((dst.h - text->h) / 2)});
+            if (text)
+                SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + mw - text->w - SCALE1(OPTION_PADDING + COLOR_PADDING + FONT_TINY), dst.y + ((dst.h - text->h) / 2)});
         }
         else if(item.getType() == ListItemType::Button) {
             // dont draw anything for now, could be a button hint later
@@ -774,7 +780,10 @@ void MenuList::drawFixedItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
         else if(item.getType() == ListItemType::Custom) {
             item.drawCustomItem(surface, dst, item, selected);
         }
-        else // Generic and fallback
+        // `text` is NULL when the label trimmed down to nothing above -- SDL_ttf
+        // 2.0.13 refuses to render a zero-width string -- and the blit needs
+        // text->w/->h to place itself, so skip drawing in that case.
+        else if (text) // Generic and fallback
             SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + mw - text->w - SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
         SDL_FreeSurface(text);
     }
@@ -791,8 +800,10 @@ void MenuList::drawFixedItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
     }
 
     text = TTF_RenderUTF8_Blended(font.small, name, text_color);
-    SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
-    SDL_FreeSurface(text);
+    if (text) {
+        SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
+        SDL_FreeSurface(text);
+    }
 }
 
 void MenuList::drawInput(SDL_Surface *surface, const SDL_Rect &dst, const SDL_Rect &dstTitle)
@@ -847,8 +858,10 @@ void MenuList::drawInputItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
         text_color = COLOR_BLACK;
     }
     text = TTF_RenderUTF8_Blended(font.small, name, text_color);
-    SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
-    SDL_FreeSurface(text);
+    if (text) {
+        SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
+        SDL_FreeSurface(text);
+    }
 
     if (/*await_input &&*/ selected)
     {
@@ -858,8 +871,13 @@ void MenuList::drawInputItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
     {
         const char *label = _(item.getLabel().c_str());
         text = TTF_RenderUTF8_Blended(font.tiny, label, COLOR_WHITE); // always white
-        SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + mw - text->w - SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
-        SDL_FreeSurface(text);
+        // TextInputMenuItem::getLabel() returns "" when it has no getter or no
+        // value, and SDL_ttf 2.0.13 renders that as NULL rather than an empty
+        // surface -- the blit below would dereference it.
+        if (text) {
+            SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + mw - text->w - SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
+            SDL_FreeSurface(text);
+        }
     }
 }
 
@@ -911,8 +929,12 @@ void MenuList::drawMainItem(SDL_Surface *surface, const SDL_Rect &dst, const Abs
         // TODO: port this over when needed. Its complete spaghetti code...
     }
     text = TTF_RenderUTF8_Blended(font.large, truncated, text_color);
-    SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(BUTTON_PADDING), dst.y + ((dst.h - text->h) / 2)});
-    SDL_FreeSurface(text);
+    // GFX_truncateText can leave `truncated` empty for a very narrow row, which
+    // SDL_ttf 2.0.13 renders as NULL rather than an empty surface.
+    if (text) {
+        SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(BUTTON_PADDING), dst.y + ((dst.h - text->h) / 2)});
+        SDL_FreeSurface(text);
+    }
 }
 
 void MenuList::resetAllItems()

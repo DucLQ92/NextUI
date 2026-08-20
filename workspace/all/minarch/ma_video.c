@@ -395,9 +395,12 @@ static void blitBitmapText(char* text, int ox, int oy, uint32_t* data, int strid
 }
 
 void drawGauge(int x, int y, float percent, int width, int height, uint32_t *data, int stride) {
-	// Clamp percent to 0.0 - 1.0
-	if (percent < 0.0f) percent = 0.0f;
-	if (percent > 1.0f) percent = 1.0f;
+	// Clamp percent to 0.0 - 1.0.
+	// Written as negated comparisons so NaN is caught too: NaN compares false
+	// against everything, so "if (percent < 0)" would let it through, and the
+	// caller divides by perf.buffer_size, which can legitimately be 0.
+	if (!(percent > 0.0f)) percent = 0.0f;
+	if (!(percent < 1.0f)) percent = 1.0f;
 
 	uint8_t red   = (uint8_t)(percent * 255.0f);
 	uint8_t green = (uint8_t)((1.0f - percent) * 255.0f);

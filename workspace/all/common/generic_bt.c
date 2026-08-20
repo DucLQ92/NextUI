@@ -345,12 +345,15 @@ int PLAT_bluetoothScan(struct BT_device *devices, int max) {
 		// Parse "Device XX:XX:XX:XX:XX:XX Name"
 		if (strncmp(line, "Device ", 7) == 0) {
 			if (sscanf(line, "Device %17s", addr) == 1) {
-				// Get name (everything after the address)
-				char *name_start = line + 7 + 18; // "Device " + "XX:XX:XX:XX:XX:XX "
+				// Get name (everything after the address).
+				// Only index past the address once the line is actually that long --
+				// bt_run_cmd truncates at its buffer limit, so the last line can be
+				// short and "line + 25" would read past the end of the buffer.
+				char *name_start = strlen(line) > 7 + 18 ? line + 7 + 18 : ""; // "Device " + "XX:XX:XX:XX:XX:XX "
 				if (*name_start) {
 					strncpy(name, name_start, sizeof(name) - 1);
 				}
-				
+
 				// Get device type
 				BluetoothDeviceType kind = bt_get_device_type(addr);
 				
@@ -421,12 +424,14 @@ int PLAT_bluetoothPaired(struct BT_devicePaired *paired, int max) {
 		// Parse "Device XX:XX:XX:XX:XX:XX Name"
 		if (strncmp(line, "Device ", 7) == 0) {
 			if (sscanf(line, "Device %17s", addr) == 1) {
-				// Get name (everything after the address)
-				char *name_start = line + 7 + 18;
+				// Get name (everything after the address).
+				// Length-checked for the same reason as the scan path above: a
+				// truncated final line would otherwise be indexed past its end.
+				char *name_start = strlen(line) > 7 + 18 ? line + 7 + 18 : "";
 				if (*name_start) {
 					strncpy(name, name_start, sizeof(name) - 1);
 				}
-				
+
 				struct BT_devicePaired *device = &paired[count];
 				strncpy(device->remote_addr, addr, sizeof(device->remote_addr) - 1);
 				device->remote_addr[sizeof(device->remote_addr) - 1] = '\0';

@@ -1652,6 +1652,9 @@ static void QuickMenu_init(void) {
 static void QuickMenu_quit(void) {
 	EntryArray_free(quick);
 	EntryArray_free(quickActions);
+	// NOTE: the icon cache is deliberately NOT freed here. This runs before
+	// GFX_quit(), and surfaces are only torn down after the GPU threads have
+	// stopped -- see the tail of main().
 }
 
 static void Menu_init(void) {
@@ -1764,6 +1767,70 @@ static SDL_Surface* thumbbmp = NULL;
 static SDL_Surface* screen = NULL; // Must be assigned externally
 static SDL_Surface* globalpill = NULL;
 static SDL_Surface* globalText = NULL;
+
+// Decoded menu icons, keyed by entry name.
+//
+// The quick-menu row draws a handful of icons every time the menu repaints, and
+// the names it draws are compile-time constants ("Recents", "Collections",
+// "Games", "Tools" -- the localized string only ever reaches the label, never
+// the icon path), so the working set is both tiny and fixed for the life of the
+// process. Without this each repaint re-read and re-decoded every PNG off the SD
+// card, which during menu animations means a fresh decode per icon per frame.
+//
+// One decoded copy is safe to share because the tint is applied at blit time:
+// GFX_blitSurfaceColor sets the colour/alpha/blend mods, blits, then restores
+// whatever the surface had before, so nothing accumulates on the cached surface.
+#define ICON_CACHE_MAX 8
+static struct {
+	char name[64];
+	SDL_Surface* surface; // NULL is a valid, cached result: a missing icon
+} icon_cache[ICON_CACHE_MAX];
+static int icon_cache_count = 0;
+
+// Returns a borrowed surface (or NULL) -- the cache keeps ownership, callers
+// must not free it.
+static SDL_Surface* getMenuIcon(const char* name) {
+	if (!name) return NULL;
+
+	for (int i = 0; i < icon_cache_count; i++) {
+		if (exactMatch(icon_cache[i].name, name))
+			return icon_cache[i].surface;
+	}
+
+	char icon_path[MAX_PATH];
+	snprintf(icon_path, sizeof(icon_path), SDCARD_PATH "/.system/res/%s@%ix.png", name, FIXED_SCALE);
+	SDL_Surface* bmp = IMG_Load(icon_path);
+	if (bmp) {
+		SDL_Surface* converted = SDL_ConvertSurfaceFormat(bmp, screen->format->format, 0);
+		if (converted) {
+			SDL_FreeSurface(bmp);
+			bmp = converted;
+		}
+	}
+
+	if (icon_cache_count >= ICON_CACHE_MAX) {
+		// Unreachable with the current fixed entry set; bail rather than hand
+		// back a surface nobody owns.
+		LOG_warn("menu icon cache full, not caching '%s'\n", name);
+		SDL_FreeSurface(bmp);
+		return NULL;
+	}
+
+	strncpy(icon_cache[icon_cache_count].name, name, sizeof(icon_cache[0].name) - 1);
+	icon_cache[icon_cache_count].name[sizeof(icon_cache[0].name) - 1] = '\0';
+	icon_cache[icon_cache_count].surface = bmp;
+	icon_cache_count++;
+	return bmp;
+}
+
+static void freeMenuIconCache(void) {
+	for (int i = 0; i < icon_cache_count; i++) {
+		if (icon_cache[i].surface) SDL_FreeSurface(icon_cache[i].surface);
+		icon_cache[i].surface = NULL;
+	}
+	icon_cache_count = 0;
+}
+
 
 static int had_thumb = 0;
 static int ox;
@@ -2742,16 +2809,9 @@ int main (int argc, char *argv[]) {
 
 						GFX_blitRectColor(ASSET_STATE_BG, screen, &item_rect, item_color);
 
-						char icon_path[MAX_PATH];
-						sprintf(icon_path, SDCARD_PATH "/.system/res/%s@%ix.png", item->name, FIXED_SCALE);
-						SDL_Surface* bmp = IMG_Load(icon_path);
-						if(bmp) {
-							SDL_Surface* converted = SDL_ConvertSurfaceFormat(bmp, screen->format->format, 0);
-							if (converted) {
-								SDL_FreeSurface(bmp);
-								bmp = converted;
-							}
-						}
+						// Borrowed from the icon cache -- decoded once, not per repaint,
+						// and owned by the cache, so it must not be freed here.
+						SDL_Surface* bmp = getMenuIcon(item->name);
 						if(bmp) {
 							// Calculate the position to center the source surface
 							int x = (item_rect.w - bmp->w) / 2;
@@ -2879,7 +2939,9 @@ int main (int argc, char *argv[]) {
 						// lotta memory churn here
 
 						SDL_Surface* bmp = IMG_Load(preview_path);
-						SDL_Surface* raw_preview = SDL_ConvertSurfaceFormat(bmp, screen->format->format, 0);
+						// guard the convert like the quick-action icon path does: a missing
+						// or unreadable preview leaves bmp NULL here.
+						SDL_Surface* raw_preview = bmp ? SDL_ConvertSurfaceFormat(bmp, screen->format->format, 0) : NULL;
 						if (raw_preview) {
 							SDL_FreeSurface(bmp);
 							bmp = raw_preview;
@@ -3432,6 +3494,7 @@ int main (int argc, char *argv[]) {
 	if(blackBG)	SDL_FreeSurface(blackBG);
 	if (folderbgbmp) SDL_FreeSurface(folderbgbmp);
 	if (thumbbmp) SDL_FreeSurface(thumbbmp);
+	freeMenuIconCache();
 
 	QuitSettings();
 }

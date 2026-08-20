@@ -158,7 +158,10 @@ void CFG_init(FontLoad_callback_t cb, ColorSet_callback_t ccb)
     }
     else
     {
-        char line[256];
+        // Wide enough for the longest line CFG_sync can emit: "fn1action=" plus a
+        // full-length fnAction (256) plus the newline. At 256 those lines were cut in
+        // half and the tail was re-parsed as if it were the next key=value pair.
+        char line[512];
         while (fgets(line, sizeof(line), file))
         {
             int temp_value;
@@ -980,7 +983,16 @@ static int rewrite_led_colors_in_file(const char *filename, uint32_t rgb_hex)
     int nlines = 0;
     while (nlines < 64 && fgets(lines[nlines], sizeof(lines[nlines]), r))
         nlines++;
+    // If there is still input left, the file is bigger than we can hold. Writing
+    // back what we captured would silently truncate the user's LED settings, so
+    // leave the file alone instead. (A 5-zone brickpro file is ~50 lines today,
+    // but that headroom shrinks every time an LED option is added.)
+    int truncated = (nlines == 64 && fgetc(r) != EOF);
     fclose(r);
+    if (truncated) {
+        printf("[CFG] LED theme sync: %s exceeds %d lines, refusing to rewrite it\n", path, 64);
+        return -1;
+    }
 
     // Write back, replacing color1= and color2= values
     FILE *w = fopen(path, "w");
