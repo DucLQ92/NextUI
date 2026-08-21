@@ -153,6 +153,10 @@ typedef struct
 	// LED Theme Sync
 	bool ledThemeSync; // sync LED color with the palette's main color
 
+	// Troubleshooting. Off by default: when on, MinUI.pak keeps per-session
+	// logs on the card instead of overwriting one file, which costs SD writes.
+	bool debugLogging;
+
 	// User-assignable buttons (see BTN_FN1/BTN_FN2/BTN_FN3 in platform.h).
 	// Action strings, "" == unassigned. See CFG_getFnAction().
 	char fnAction[FN_BUTTON_COUNT][256];
@@ -248,6 +252,7 @@ typedef struct
 #define CFG_DEFAULT_EXTRACTEDFILENAME false
 #define CFG_DEFAULT_MUTELEDS false
 #define CFG_DEFAULT_LED_THEME_SYNC false
+#define CFG_DEFAULT_DEBUG_LOGGING false
 #define CFG_DEFAULT_FN_ACTION "" // unassigned
 #define CFG_DEFAULT_GAMEARTWIDTH 0.45
 #define CFG_DEFAULT_WIFI false
@@ -404,6 +409,11 @@ void CFG_setLedThemeSync(bool);
 void CFG_applyLedThemeSync(void); // apply main color → LEDs + ledsettings.txt
 // Register the platform callback that performs the actual LED hardware + file update.
 void CFG_setLedThemeSyncCallback(LedThemeSync_callback_t cb);
+// Keep per-session logs on the card for troubleshooting, pruned after 2 days.
+// Read from minuisettings.txt by MinUI.pak at boot, which is what acts on it --
+// nothing in the C code changes behaviour based on this flag.
+bool CFG_getDebugLogging(void);
+void CFG_setDebugLogging(bool);
 // The action bound to a user-assignable button, where `index` is 0 (FN1), 1 (FN2) or
 // 2 (FN3, the "HOME" button).
 // The value is a "<kind>:<arg>" action string so more kinds can be added later without

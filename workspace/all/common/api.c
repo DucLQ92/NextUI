@@ -15,6 +15,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #include "utils.h"
 #include "config.h"
@@ -32,24 +33,37 @@ void LOG_note(int level, const char *fmt, ...)
 	va_start(args, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
+
+	// Timestamps only when the user has turned on debug logging. Those runs are
+	// the ones kept on the card per session, and a crash log that cannot say
+	// *when* the device stopped answers nothing. Off, the output is unchanged.
+	char stamp[16] = {0};
+	if (CFG_getDebugLogging())
+	{
+		time_t now = time(NULL);
+		struct tm tm_now;
+		if (localtime_r(&now, &tm_now))
+			strftime(stamp, sizeof(stamp), "[%H:%M:%S] ", &tm_now);
+	}
+
 	switch (level)
 	{
 #ifdef DEBUG
 	case LOG_DEBUG:
-		printf("[DEBUG] %s", buf);
+		printf("%s[DEBUG] %s", stamp, buf);
 		fflush(stdout);
 		break;
 #endif
 	case LOG_INFO:
-		printf("[INFO] %s", buf);
+		printf("%s[INFO] %s", stamp, buf);
 		fflush(stdout);
 		break;
 	case LOG_WARN:
-		fprintf(stderr, "[WARN] %s", buf);
+		fprintf(stderr, "%s[WARN] %s", stamp, buf);
 		fflush(stderr);
 		break;
 	case LOG_ERROR:
-		fprintf(stderr, "[ERROR] %s", buf);
+		fprintf(stderr, "%s[ERROR] %s", stamp, buf);
 		fflush(stderr);
 		break;
 	default:
