@@ -21,6 +21,17 @@ LOCAL_VERSION="$SDCARD_PATH/.system/version.txt"
 TMP_ZIP="$SDCARD_PATH/.MinUI.zip.part"
 FINAL_ZIP="$SDCARD_PATH/MinUI.zip"
 
+# show2 splits --text on real newline bytes, so a backslash-n written in a shell
+# string reaches it literally and gets drawn on screen as the two characters
+# instead of breaking the line.
+NL='
+'
+
+# -k because the device has no CA bundle -- http.c passes it for the same reason
+# and every HTTPS request fails certificate verification without it.
+# --connect-timeout / --speed-* so a half-open connection can't stall forever.
+CURL_OPTS="-k --connect-timeout 10 --speed-limit 1024 --speed-time 30"
+
 FIFO="/tmp/show2.fifo"
 SHOW_PID=""
 UI_FD_OPEN=0
@@ -85,12 +96,17 @@ ui_start "Đang kiểm tra cập nhật..."
 # dependency http.c already relies on for RetroAchievements. Checked separately
 # so a missing binary doesn't get reported as a network failure.
 if ! command -v curl >/dev/null 2>&1; then
-    fail "Không tìm thấy curl trên máy.\nKhông thể tự cập nhật."
+    fail "Không tìm thấy curl trên máy.${NL}Không thể tự cập nhật."
 fi
 
 # --- connectivity -----------------------------------------------------------
-if ! curl -s -m 10 -o /dev/null "https://github.com"; then
-    fail "Không có kết nối mạng.\nHãy bật Wi-Fi rồi thử lại."
+# Checked by looking for an IPv4 address on the interface, not by reaching out to
+# a host. curl's -m cannot interrupt a blocking getaddrinfo(), so with Wi-Fi off
+# the name lookup for github.com can hang well past any timeout -- and a pak has
+# no way to be cancelled, so the device is stuck on the splash until it is force
+# restarted. Reading the interface state costs nothing and never touches DNS.
+if ! ip -4 addr show wlan0 2>/dev/null | grep -q "inet "; then
+    fail "Chưa kết nối Wi-Fi.${NL}Hãy bật Wi-Fi rồi thử lại."
 fi
 
 # --- what is installed ------------------------------------------------------
@@ -105,9 +121,9 @@ else
 fi
 
 # --- what is published ------------------------------------------------------
-REMOTE_VERSION=$(curl -sfL -m 20 "$RELEASE_BASE/version.txt" 2>/dev/null)
+REMOTE_VERSION=$(curl -sfL $CURL_OPTS -m 20 "$RELEASE_BASE/version.txt" 2>/dev/null)
 if [ -z "$REMOTE_VERSION" ]; then
-    fail "Không đọc được thông tin phiên bản.\nCó thể chưa có bản phát hành nào."
+    fail "Không đọc được thông tin phiên bản.${NL}Có thể chưa có bản phát hành nào."
 fi
 REMOTE_NAME=$(printf '%s\n' "$REMOTE_VERSION" | sed -n '1p' | tr -d '\r')
 REMOTE_HASH=$(printf '%s\n' "$REMOTE_VERSION" | sed -n '2p' | tr -d '\r')
@@ -115,7 +131,7 @@ REMOTE_HASH=$(printf '%s\n' "$REMOTE_VERSION" | sed -n '2p' | tr -d '\r')
 if [ -n "$LOCAL_HASH" ] && [ "$LOCAL_HASH" = "$REMOTE_HASH" ]; then
     ui_stop
     show2.elf --mode=simple --image="$LOGO" \
-        --text="Bạn đang dùng bản mới nhất.\n$LOCAL_NAME" --timeout=4
+        --text="Bạn đang dùng bản mới nhất.${NL}$LOCAL_NAME" --timeout=4
     exit 0
 fi
 
@@ -125,7 +141,7 @@ fi
 CAPACITY=$(cat /sys/class/power_supply/axp2202-battery/capacity 2>/dev/null)
 CHARGING=$(cat /sys/class/power_supply/axp2202-battery/status 2>/dev/null)
 if [ -n "$CAPACITY" ] && [ "$CAPACITY" -lt 30 ] && [ "$CHARGING" != "Charging" ]; then
-    fail "Pin còn $CAPACITY%.\nHãy sạc trên 30% rồi cập nhật."
+    fail "Pin còn $CAPACITY%.${NL}Hãy sạc trên 30% rồi cập nhật."
 fi
 
 # --- download ---------------------------------------------------------------
@@ -134,15 +150,30 @@ ui_progress 0
 
 rm -f "$TMP_ZIP"
 # --fail so an HTML error page is never mistaken for a payload.
-curl -sfL -m 900 -o "$TMP_ZIP" "$RELEASE_BASE/MinUI.zip" &
+curl -sfL $CURL_OPTS -m 900 -o "$TMP_ZIP" "$RELEASE_BASE/MinUI.zip" &
 CURL_PID=$!
 
-# MinUI.zip is ~19MB; drive the bar off the bytes on disk rather than parsing
-# curl's own meter, which needs a tty.
-EXPECTED=20000000
+# Drive the bar off the bytes on disk rather than parsing curl's own meter,
+# which needs a tty. The payload size changes from build to build, so ask for it
+# rather than assuming; the fallback only affects how honest the bar looks.
+EXPECTED=$(curl -sfLI $CURL_OPTS -m 20 "$RELEASE_BASE/MinUI.zip" 2>/dev/null \
+    | tr -d '\r' | awk 'tolower($1) == "content-length:" { print $2 }' | tail -1)
+case "$EXPECTED" in
+    ''|*[!0-9]*) EXPECTED=20000000 ;;
+esac
+[ "$EXPECTED" -le 0 ] 2>/dev/null && EXPECTED=20000000
+
 while kill -0 "$CURL_PID" 2>/dev/null; do
     if [ -f "$TMP_ZIP" ]; then
-        SIZE=$(stat -c %s "$TMP_ZIP" 2>/dev/null || echo 0)
+        # busybox stat understands -c; fall back to wc so a stat that doesn't
+        # can't leave the bar frozen at zero for the whole download.
+        SIZE=$(stat -c %s "$TMP_ZIP" 2>/dev/null) || SIZE=""
+        case "$SIZE" in
+            ''|*[!0-9]*) SIZE=$(wc -c < "$TMP_ZIP" 2>/dev/null | tr -d ' ') ;;
+        esac
+        case "$SIZE" in
+            ''|*[!0-9]*) SIZE=0 ;;
+        esac
         PCT=$((SIZE * 100 / EXPECTED))
         [ "$PCT" -gt 99 ] && PCT=99
         ui_progress "$PCT"
@@ -152,14 +183,14 @@ done
 wait "$CURL_PID"
 CURL_RC=$?
 
-[ "$CURL_RC" -ne 0 ] && fail "Tải thất bại.\nKiểm tra kết nối rồi thử lại."
-[ ! -s "$TMP_ZIP" ] && fail "Tệp tải về rỗng.\nHãy thử lại."
+[ "$CURL_RC" -ne 0 ] && fail "Tải thất bại.${NL}Kiểm tra kết nối rồi thử lại."
+[ ! -s "$TMP_ZIP" ] && fail "Tệp tải về rỗng.${NL}Hãy thử lại."
 
 # Cheap integrity check without depending on unzip being on PATH: every zip
 # starts with "PK\x03\x04".
 MAGIC=$(dd if="$TMP_ZIP" bs=1 count=2 2>/dev/null)
 if [ "$MAGIC" != "PK" ]; then
-    fail "Tệp tải về không hợp lệ.\nHãy thử lại."
+    fail "Tệp tải về không hợp lệ.${NL}Hãy thử lại."
 fi
 
 ui_progress 100
@@ -171,7 +202,7 @@ sync
 
 ui_stop
 show2.elf --mode=simple --image="$LOGO" \
-    --text="Đã tải xong $REMOTE_NAME.\nMáy sẽ khởi động lại để cài đặt." --timeout=5
+    --text="Đã tải xong $REMOTE_NAME.${NL}Máy sẽ khởi động lại để cài đặt." --timeout=5
 
 # The staged zip is the update now; don't let the exit trap delete it.
 trap - EXIT INT TERM
