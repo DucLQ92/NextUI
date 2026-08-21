@@ -429,7 +429,7 @@ void PLAT_initDefaultLeds() {
 		{},
 		1,
 		100,
-		0
+		-1
 	};
 	lightsDefault[1] = (LightSettings) {
 		"Joystick R",
@@ -443,7 +443,7 @@ void PLAT_initDefaultLeds() {
 		{},
 		1,
 		100,
-		0
+		-1
 	};
 	lightsDefault[2] = (LightSettings) {
 		"Logo",
@@ -457,7 +457,7 @@ void PLAT_initDefaultLeds() {
 		{},
 		1,
 		100,
-		0
+		-1
 	};
 }
 void PLAT_initLeds(LightSettings *lights) 

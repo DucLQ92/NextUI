@@ -410,25 +410,25 @@ ConnectionStrength PLAT_connectionStrength(void) {
 void PLAT_initDefaultLeds() {
 	PLAT_initPlatform();
 	if(is_brickpro) {
-		lightsDefault[0] = (LightSettings) {"FN 1 key","f1",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		lightsDefault[1] = (LightSettings) {"FN 2 key","f2",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		lightsDefault[2] = (LightSettings) {"Topbar","m",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		lightsDefault[3] = (LightSettings) {"Joysticks L/R","lr",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		//lightsDefault[4] = (LightSettings) {"Joystick L","l",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		//lightsDefault[5] = (LightSettings) {"Joystick R","r",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		lightsDefault[4] = (LightSettings) {"Triggers L/R","rear",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
+		lightsDefault[0] = (LightSettings) {"FN 1 key","f1",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		lightsDefault[1] = (LightSettings) {"FN 2 key","f2",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		lightsDefault[2] = (LightSettings) {"Topbar","m",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		lightsDefault[3] = (LightSettings) {"Joysticks L/R","lr",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		//lightsDefault[4] = (LightSettings) {"Joystick L","l",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		//lightsDefault[5] = (LightSettings) {"Joystick R","r",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		lightsDefault[4] = (LightSettings) {"Triggers L/R","rear",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
 	}
 	else if(is_brick) {
-		lightsDefault[0] = (LightSettings) {"FN 1 key","f1",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		lightsDefault[1] = (LightSettings) {"FN 2 key","f2",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		lightsDefault[2] = (LightSettings) {"Topbar","m",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		lightsDefault[3] = (LightSettings) {"L/R triggers","lr",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		//lightsDefault[3] = (LightSettings) {"L trigger","l",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		//lightsDefault[3] = (LightSettings) {"R trigger","r",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
+		lightsDefault[0] = (LightSettings) {"FN 1 key","f1",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		lightsDefault[1] = (LightSettings) {"FN 2 key","f2",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		lightsDefault[2] = (LightSettings) {"Topbar","m",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		lightsDefault[3] = (LightSettings) {"L/R triggers","lr",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		//lightsDefault[3] = (LightSettings) {"L trigger","l",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		//lightsDefault[3] = (LightSettings) {"R trigger","r",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
 	} else {
-		lightsDefault[0] = (LightSettings) {"Joystick L","l",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		lightsDefault[1] = (LightSettings) {"Joystick R","r",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
-		lightsDefault[2] = (LightSettings) {"Logo","m",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,0};
+		lightsDefault[0] = (LightSettings) {"Joystick L","l",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		lightsDefault[1] = (LightSettings) {"Joystick R","r",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
+		lightsDefault[2] = (LightSettings) {"Logo","m",4,1000,100,0xFFFFFF,0xFFFFFF,0,{},1,100,-1};
 	}
 }
 void PLAT_initLeds(LightSettings *lights) 
