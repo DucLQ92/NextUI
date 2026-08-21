@@ -36,13 +36,24 @@ RELEASE_NAME ?= $(RELEASE_BASE)-$(RELEASE_DOT)
 
 # Extra paks to ship
 VENDOR_DEST := ./build/VENDOR/Tools
-PACKAGE_URL_MAPPINGS := \
-	"https://github.com/UncleJunVIP/nextui-pak-store/releases/latest/download/Pak.Store.pakz nextui.pak_store.pakz"
-	# add more URLs as needed
+
+# Pak Store: bundle our own fork instead of upstream.
+# A local build at PAK_STORE_PAKZ wins; otherwise PAK_STORE_URL is downloaded.
+# Build the local one with `make pak-store`.
+PAK_STORE_SRC ?= ../nextui-pak-store
+PAK_STORE_PAKZ ?= $(PAK_STORE_SRC)/build/Pak.Store.pakz
+PAK_STORE_URL ?= https://github.com/DucLQ92/nextui-pak-store/releases/latest/download/Pak.Store.pakz
+
+# Other vendored paks, format: "<url> <target filename>"
+PACKAGE_URL_MAPPINGS :=
 
 ###########################################################
 
-.PHONY: build
+.PHONY: build pak-store
+
+# Build our forked Pak Store into $(PAK_STORE_PAKZ) (needs docker, task and jq)
+pak-store:
+	cd $(PAK_STORE_SRC) && task all
 
 export MAKEFLAGS=--no-print-directory
 
@@ -249,14 +260,26 @@ package: tidy
 	cd ./build/PAYLOAD && zip -r MinUI.zip .system .tmp_update Tools
 	mv ./build/PAYLOAD/MinUI.zip ./build/BASE
 
-	# Fetch, rename, and stage vendored packages
+	# Stage the Pak Store (local build preferred, release download as fallback)
 	mkdir -p $(VENDOR_DEST)
+	@if [ -f "$(PAK_STORE_PAKZ)" ]; then \
+		echo "Using local Pak Store build: $(PAK_STORE_PAKZ)"; \
+		cp "$(PAK_STORE_PAKZ)" "$(VENDOR_DEST)/nextui.pak_store.pakz"; \
+	else \
+		echo "Downloading $(PAK_STORE_URL) → $(VENDOR_DEST)/nextui.pak_store.pakz"; \
+		curl -Lsf -o "$(VENDOR_DEST)/nextui.pak_store.pakz" "$(PAK_STORE_URL)" || \
+			{ echo "ERROR: could not fetch Pak Store from $(PAK_STORE_URL)"; exit 1; }; \
+	fi
+
+	# Fetch, rename, and stage any other vendored packages
+ifneq (,$(strip $(PACKAGE_URL_MAPPINGS)))
 	@for entry in $(PACKAGE_URL_MAPPINGS); do \
 		url=$$(echo $$entry | awk '{print $$1}'); \
 		target=$$(echo $$entry | awk '{print $$2}'); \
 		echo "Downloading $$url → $(VENDOR_DEST)/$$target"; \
 		curl -Ls -o "$(VENDOR_DEST)/$$target" "$$url"; \
 	done
+endif
 
 	# Move renamed .pakz files into base folder
 	mkdir -p ./build/BASE
