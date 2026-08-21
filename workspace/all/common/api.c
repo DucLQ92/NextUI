@@ -377,6 +377,15 @@ SDL_Surface *GFX_init(int mode)
 	LEDS_initLeds();
 	// Register LED theme sync callback so CFG_applyLedThemeSync can update LED hardware
 	CFG_setLedThemeSyncCallback(LEDS_applyThemeColor);
+	// LEDS_initLeds() has just rebuilt every profile from PLAT_initDefaultLeds()
+	// plus whatever ledsettings.txt held, so the theme colour has to be re-applied
+	// here or this process runs with the stock colour. Without this the feature
+	// only appeared to work while the Settings app that toggled it was still
+	// running, and on a fresh card -- where ledsettings.txt does not exist yet,
+	// so nothing could be persisted either -- it never worked at all until
+	// LedControl had been opened once to create the file.
+	// No-ops when the setting is off (CFG_applyLedThemeSync returns early).
+	CFG_applyLedThemeSync();
 
 	RGB_WHITE = SDL_MapRGB(gfx.screen->format, TRIAD_WHITE);
 	RGB_BLACK = SDL_MapRGB(gfx.screen->format, TRIAD_BLACK);
