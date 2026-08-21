@@ -167,6 +167,27 @@ jobs:
           name: ${{ env.RELEASE_NAME }}-extras.zip
           path: releases/${{ env.RELEASE_NAME }}-extras.zip
 
+      # OTA payload for Updater.pak. MinUI.zip is the installer archive the boot
+      # scripts already consume (~19MB) and is otherwise only reachable by
+      # downloading the ~81MB base zip and unpacking it. version.txt is what the
+      # updater compares against the copy in .system to decide if there is
+      # anything to do. Kept as single-file artifacts so the download step's
+      # merge-multiple lands them flat in releases/, where the release action
+      # picks them up alongside the zips.
+      - name: Upload OTA payload
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: NextUI-ota-MinUI.zip
+          path: build/BASE/MinUI.zip
+
+      - name: Upload OTA version marker
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: NextUI-ota-version.txt
+          # NOT build/SYSTEM: `make package` folds that tree into the payload, so
+          # by this point the file only exists under build/PAYLOAD/.system.
+          path: build/PAYLOAD/.system/version.txt
+
       - name: Skip Attest for PRs from forks
         id: skip
         if: github.ref != 'refs/heads/main'
