@@ -10,7 +10,15 @@
  *   show2.elf --mode=simple --image=<path> [--bgcolor=0x000000]
  *   show2.elf --mode=progress --image=<path> [--bgcolor=0x000000] [--fontcolor=0xFFFFFF] [--text="message"] [--progress=0]
  *   show2.elf --mode=daemon --image=<path> [--bgcolor=0x000000] [--fontcolor=0xFFFFFF] [--text="message"]
- * 
+ *
+ * Text may contain newlines; each line is drawn centered on its own row.
+ *
+ * With --cancel the splash also reads the gamepad and offers the user a way
+ * out: the cancel button raises a confirmation panel, and confirming exits
+ * with EXIT_CANCELLED after touching --cancel-flag. A shell driving a long
+ * job can poll for that file, so a script that would otherwise wedge behind a
+ * blocking network call always has an escape the user can reach.
+ *
  * Daemon mode FIFO commands (/tmp/show2.fifo):
  *   TEXT:message
  *   PROGRESS:50
@@ -22,6 +30,7 @@
 #include <string>
 #include <map>
 #include <memory>
+#include <vector>
 #include <cstring>
 #include <cmath>
 #include <unistd.h>
@@ -43,6 +52,16 @@ constexpr int TEXT_PADDING = 20;
 constexpr int LOGO_TEXT_PADDING = 40;
 constexpr int FONT_SIZE = 24;
 constexpr int FPS = 60;
+// Distinct from the generic failure code so a caller can tell "the user backed
+// out" apart from "the splash could not start".
+constexpr int EXIT_CANCELLED = 2;
+
+// Joystick button indices, from workspace/<platform>/platform.h. tg5040 and
+// tg5050 agree on these (and both report physical A as 1, B as 0 -- swapped by
+// the stock firmware). Overridable so this stays honest on anything that
+// doesn't.
+constexpr int DEFAULT_JOY_CANCEL = 0;   // B
+constexpr int DEFAULT_JOY_CONFIRM = 1;  // A
 
 enum class DisplayMode {
     Simple,
@@ -62,6 +81,14 @@ struct Config {
     int timeout_seconds = 0;  // Auto-close timeout (0 = no timeout)
     int logo_height = 0;      // Scale logo to this height (0 = no scaling)
     int font_size = 24;       // Font size in pixels
+
+    bool cancelable = false;        // Read the gamepad and offer a way out
+    std::string cancel_hint;        // Drawn along the bottom while running
+    std::string cancel_text;        // Question shown in the confirmation panel
+    std::string cancel_buttons;     // Button legend shown under the question
+    std::string cancel_flag_path;   // Touched on confirm, for the caller to poll
+    int joy_cancel = DEFAULT_JOY_CANCEL;
+    int joy_confirm = DEFAULT_JOY_CONFIRM;
 };
 
 class ShowApp {
@@ -84,6 +111,12 @@ private:
     bool running = true;
     pthread_mutex_t mutex;
     pthread_t fifo_thread_handle;
+
+    // Cancel state. Only ever touched from the render thread, so it needs no
+    // mutex -- the fifo thread never looks at it.
+    std::vector<SDL_Joystick*> joysticks;
+    bool confirming = false;
+    bool cancelled = false;
 
 public:
     ShowApp(const Config& cfg) : config(cfg) {
@@ -111,6 +144,20 @@ public:
         }
 
         SDL_ShowCursor(0);
+
+        // Only opened when a cancel button was asked for, so every existing
+        // caller keeps running exactly as before -- video only, no input.
+        if (config.cancelable) {
+            if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == 0) {
+                SDL_JoystickEventState(SDL_ENABLE);
+                for (int i = 0; i < SDL_NumJoysticks(); ++i) {
+                    SDL_Joystick* joy = SDL_JoystickOpen(i);
+                    if (joy) joysticks.push_back(joy);
+                }
+            } else {
+                std::cerr << "SDL_INIT_JOYSTICK failed: " << SDL_GetError() << std::endl;
+            }
+        }
 
         window = SDL_CreateWindow("", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                                    0, 0, SDL_WINDOW_SHOWN);
@@ -224,6 +271,14 @@ public:
         return running;
     }
 
+    bool wasCancelled() const {
+        return cancelled;
+    }
+
+    void notifyCancelled() {
+        writeCancelFlag();
+    }
+
     static uint32_t parseColor(const std::string& color_str) {
         std::string hex = color_str;
         if (hex.find("0x") == 0 || hex.find("0X") == 0) {
@@ -235,8 +290,39 @@ public:
     }
 
 private:
+    // Reads the gamepad and drives the confirm/cancel state machine. Called
+    // from the render thread once a frame; a no-op unless --cancel was given.
+    void pumpInput() {
+        if (!config.cancelable) return;
+
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            if (event.type != SDL_JOYBUTTONDOWN) continue;
+
+            int button = event.jbutton.button;
+            if (!confirming) {
+                if (button == config.joy_cancel) confirming = true;
+            } else if (button == config.joy_confirm) {
+                cancelled = true;
+                running = false;
+            } else if (button == config.joy_cancel) {
+                confirming = false;
+            }
+        }
+    }
+
+    // The caller polls for this file rather than for our exit status: we are
+    // its background job, and it is typically parked in a loop around some
+    // other process when the user gives up.
+    void writeCancelFlag() {
+        if (config.cancel_flag_path.empty()) return;
+        int fd = open(config.cancel_flag_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd >= 0) close(fd);
+    }
+
     void runSimpleLoop() {
         while (running) {
+            pumpInput();
             render();
             
             // Check timeout if configured
@@ -262,8 +348,22 @@ private:
         pthread_create(&fifo_thread_handle, nullptr, fifoThreadEntry, this);
 
         while (running) {
+            pumpInput();
             render();
             SDL_Delay(1000 / FPS);
+        }
+
+        if (cancelled) {
+            // The fifo thread is parked in a blocking read and our caller holds
+            // the write end open for the life of the job, so it will never
+            // return -- joining here would hang the exact exit path this button
+            // exists to provide. Detach it and leave through _exit instead;
+            // cleanup() still gives the display back properly on the way out.
+            pthread_detach(fifo_thread_handle);
+            unlink(FIFO_PATH);
+            writeCancelFlag();
+            cleanup();
+            _exit(EXIT_CANCELLED);
         }
 
         pthread_join(fifo_thread_handle, nullptr);
@@ -354,8 +454,78 @@ private:
             renderProgress();
         }
 
+        if (confirming) {
+            renderConfirm();
+        } else if (config.cancelable && font && !config.cancel_hint.empty()) {
+            drawTextBlock(config.cancel_hint,
+                          screen->h - TTF_FontLineSkip(font) - TEXT_PADDING);
+        }
+
         SDL_UpdateWindowSurface(window);
         pthread_mutex_unlock(&mutex);
+    }
+
+    static std::vector<std::string> splitLines(const std::string& text) {
+        std::vector<std::string> lines;
+        std::string current;
+        for (char c : text) {
+            if (c == '\n') {
+                lines.push_back(current);
+                current.clear();
+            } else if (c != '\r') {
+                current += c;
+            }
+        }
+        lines.push_back(current);
+        return lines;
+    }
+
+    // TTF_RenderUTF8_Blended draws a single line and turns an embedded newline
+    // into a missing-glyph box, so a message that wants two lines has to be
+    // split and stacked by hand. Each line is centered independently.
+    int drawTextBlock(const std::string& text, int top_y) {
+        if (!font || text.empty()) return 0;
+
+        int line_height = TTF_FontLineSkip(font);
+        int y = top_y;
+        for (const auto& line : splitLines(text)) {
+            if (!line.empty()) {
+                SDL_Surface* surface = TTF_RenderUTF8_Blended(font, line.c_str(), font_color);
+                if (surface) {
+                    SDL_Rect dst = {(screen->w - surface->w) / 2, y, surface->w, surface->h};
+                    SDL_BlitSurface(surface, nullptr, screen, &dst);
+                    SDL_FreeSurface(surface);
+                }
+            }
+            y += line_height;
+        }
+        return y - top_y;
+    }
+
+    void renderConfirm() {
+        if (!font) return;
+
+        std::string body = config.cancel_text;
+        if (!config.cancel_buttons.empty()) body += "\n" + config.cancel_buttons;
+
+        std::vector<std::string> lines = splitLines(body);
+        int line_height = TTF_FontLineSkip(font);
+        int max_width = 0;
+        for (const auto& line : lines) {
+            int w = 0, h = 0;
+            if (TTF_SizeUTF8(font, line.c_str(), &w, &h) == 0 && w > max_width) max_width = w;
+        }
+
+        int box_w = max_width + TEXT_PADDING * 2;
+        int box_h = static_cast<int>(lines.size()) * line_height + TEXT_PADDING * 2;
+        if (box_w > screen->w - TEXT_PADDING * 2) box_w = screen->w - TEXT_PADDING * 2;
+
+        int box_x = (screen->w - box_w) / 2;
+        int box_y = (screen->h - box_h) / 2;
+
+        uint32_t panel = SDL_MapRGB(screen->format, 24, 24, 24);
+        drawRoundedRect(box_x, box_y, box_w, box_h, TEXT_PADDING / 2, panel);
+        drawTextBlock(body, box_y + TEXT_PADDING);
     }
 
     void renderSimple() {
@@ -372,20 +542,7 @@ private:
         }
 
         // Draw text at percentage-based Y position
-        if (font && !current_text.empty()) {
-            SDL_Surface* text_surface = TTF_RenderUTF8_Blended(font, current_text.c_str(), font_color);
-            if (text_surface) {
-                int text_y = (screen->h * current_text_y_pct) / 100;
-                SDL_Rect text_dst = {
-                    (screen->w - text_surface->w) / 2,
-                    text_y,
-                    text_surface->w,
-                    text_surface->h
-                };
-                SDL_BlitSurface(text_surface, nullptr, screen, &text_dst);
-                SDL_FreeSurface(text_surface);
-            }
-        }
+        drawTextBlock(current_text, (screen->h * current_text_y_pct) / 100);
     }
 
     void renderProgress() {
@@ -491,6 +648,11 @@ private:
     }
 
     void cleanup() {
+        for (SDL_Joystick* joy : joysticks) {
+            SDL_JoystickClose(joy);
+        }
+        joysticks.clear();
+
         if (scaled_logo) {
             SDL_FreeSurface(scaled_logo);
             scaled_logo = nullptr;
@@ -562,6 +724,19 @@ void printUsage() {
     std::cout << "Logo height parameter (logoheight) scales the logo to the specified height in pixels (0 = no scaling)\n";
     std::cout << "Font size parameter (fontsize) sets the text size in pixels (default = 24)\n";
     std::cout << "Timeout parameter (timeout) is in seconds (0 = no timeout, runs until killed)\n";
+    std::cout << "Text may contain newlines; each line is drawn centered on its own row\n";
+    std::cout << "\n";
+    std::cout << "Cancel button (any mode):\n";
+    std::cout << "  --cancel                 read the gamepad and allow the user to back out\n";
+    std::cout << "  --cancel-hint=\"B: Quit\"  drawn along the bottom while running\n";
+    std::cout << "  --cancel-text=\"Quit?\"    question shown in the confirmation panel\n";
+    std::cout << "  --cancel-buttons=\"...\"   button legend shown under the question\n";
+    std::cout << "  --cancel-flag=<path>     file to touch on confirm, for the caller to poll\n";
+    std::cout << "  --cancel-button=N        joystick button that opens the panel (default "
+              << DEFAULT_JOY_CANCEL << ", B)\n";
+    std::cout << "  --confirm-button=N       joystick button that confirms (default "
+              << DEFAULT_JOY_CONFIRM << ", A)\n";
+    std::cout << "Exits with " << EXIT_CANCELLED << " when the user confirms cancel.\n";
     std::cout << "\n";
     std::cout << "Daemon mode commands via FIFO (" << FIFO_PATH << "):\n";
     std::cout << "  echo \"TEXT:Your message\" > " << FIFO_PATH << "\n";
@@ -635,6 +810,34 @@ int main(int argc, char* argv[]) {
         config.font_size = std::stoi(args["fontsize"]);
     }
 
+    if (args.find("cancel") != args.end()) {
+        config.cancelable = args["cancel"] != "0";
+    }
+
+    if (args.find("cancel-hint") != args.end()) {
+        config.cancel_hint = args["cancel-hint"];
+    }
+
+    if (args.find("cancel-text") != args.end()) {
+        config.cancel_text = args["cancel-text"];
+    }
+
+    if (args.find("cancel-buttons") != args.end()) {
+        config.cancel_buttons = args["cancel-buttons"];
+    }
+
+    if (args.find("cancel-flag") != args.end()) {
+        config.cancel_flag_path = args["cancel-flag"];
+    }
+
+    if (args.find("cancel-button") != args.end()) {
+        config.joy_cancel = std::stoi(args["cancel-button"]);
+    }
+
+    if (args.find("confirm-button") != args.end()) {
+        config.joy_confirm = std::stoi(args["confirm-button"]);
+    }
+
     // Create and run app
     ShowApp app(config);
     g_app = &app;
@@ -646,6 +849,13 @@ int main(int argc, char* argv[]) {
     }
 
     app.run();
+
+    // Daemon mode leaves through _exit when cancelled; this covers the simple
+    // and progress loops, which return normally.
+    if (app.wasCancelled()) {
+        app.notifyCancelled();
+        return EXIT_CANCELLED;
+    }
 
     return 0;
 }
