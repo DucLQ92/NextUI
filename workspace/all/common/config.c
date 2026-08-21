@@ -994,6 +994,22 @@ static int rewrite_led_colors_in_file(const char *filename, uint32_t rgb_hex)
         return -1;
     }
 
+    // Skip the write when every colour line already holds the target value.
+    // CFG_applyLedThemeSync now also runs at startup, and it runs again on every
+    // step of the colour sliders, so without this check each of those would be a
+    // full rewrite of a file on the SD card that nothing had actually changed.
+    char expected[16];
+    snprintf(expected, sizeof(expected), "0x%06X", rgb_hex);
+    int needs_write = 0;
+    for (int i = 0; i < nlines && !needs_write; i++) {
+        const char *value = NULL;
+        if (strncmp(lines[i], "color1=", 7) == 0) value = lines[i] + 7;
+        else if (strncmp(lines[i], "color2=", 7) == 0) value = lines[i] + 7;
+        if (!value) continue;
+        if (strncmp(value, expected, strlen(expected)) != 0) needs_write = 1;
+    }
+    if (!needs_write) return 0;
+
     // Write back, replacing color1= and color2= values
     FILE *w = fopen(path, "w");
     if (!w) return -1;
