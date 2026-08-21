@@ -180,11 +180,24 @@ parse_hook_cmd() {
 # kill show2.elf if running
 killall -9 show2.elf > /dev/null 2>&1
 
+# Troubleshooting logs, off unless enabled in Settings > System. No-ops when off.
+. "$SYSTEM_PATH/bin/logs.sh"
+logs_begin_session
+
 EXEC_PATH="/tmp/nextui_exec"
 NEXT_PATH="/tmp/next"
 touch "$EXEC_PATH"  && sync
 while [ -f $EXEC_PATH ]; do
-	nextui.elf &> $LOGS_PATH/nextui.txt
+	if logs_enabled; then
+		# Appended, not truncated: the launcher restarts on every return from a
+		# game, and overwriting here is what used to destroy a crash's evidence
+		# before anyone could read it.
+		nextui.elf >> "$LOGS_NEXTUI_LOG" 2>&1
+		logs_mark "nextui.elf exited with $?"
+		sync
+	else
+		nextui.elf &> $LOGS_PATH/nextui.txt
+	fi
 	# default launched paks to performance, they can change it themselves after launch if they want
 	sh "$SYSTEM_PATH/bin/governor.sh" "performance"
 	
@@ -192,7 +205,9 @@ while [ -f $EXEC_PATH ]; do
 		CMD=`cat $NEXT_PATH`
 		parse_hook_cmd "$CMD"
 		"$SYSTEM_PATH/bin/run_hooks.sh" pre-launch.d
+		logs_mark "launching: $CMD"
 		eval $CMD
+		logs_mark "returned from: $HOOK_EMU_PATH"
 		"$SYSTEM_PATH/bin/run_hooks.sh" post-launch.d
 		rm -f $NEXT_PATH
 		# reset to performance when exiting, UI will reset to auto if needed
@@ -200,13 +215,19 @@ while [ -f $EXEC_PATH ]; do
 	fi
 
 	if [ -f "/tmp/poweroff" ]; then
+		logs_mark "powering off on request"
+		logs_end_session
 		poweroff_next
 		exit 0
 	fi
 	if [ -f "/tmp/reboot" ]; then
+		logs_mark "rebooting on request"
+		logs_end_session
 		reboot_next
 		exit 0
 	fi
 done
 
+logs_mark "launcher loop exited"
+logs_end_session
 poweroff_next # just in case

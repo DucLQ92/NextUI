@@ -687,6 +687,12 @@ int main(int argc, char *argv[])
         }
 
         systemItems.push_back(
+            new MenuItem{ListItemType::Generic, "Debug logging", "Keep logs on the card to help diagnose crashes.\nSaved per session under .userdata/logs, kept 2 days.", {false, true}, on_off,
+            []() -> std::any { return CFG_getDebugLogging(); },
+            [](const std::any &value) { CFG_setDebugLogging(std::any_cast<bool>(value)); },
+            []() { CFG_setDebugLogging(CFG_DEFAULT_DEBUG_LOGGING); }});
+
+        systemItems.push_back(
             new MenuItem{ListItemType::Button, "Reset to defaults", "Resets all options in this menu to their default values.", ResetCurrentMenu});
 
         auto systemMenu = new MenuList(MenuItemType::Fixed, "System", systemItems);

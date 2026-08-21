@@ -66,6 +66,7 @@ void CFG_defaults(NextUISettings *cfg)
 
         .muteLeds = CFG_DEFAULT_MUTELEDS,
         .ledThemeSync = CFG_DEFAULT_LED_THEME_SYNC,
+        .debugLogging = CFG_DEFAULT_DEBUG_LOGGING,
 
         .fnAction = {CFG_DEFAULT_FN_ACTION, CFG_DEFAULT_FN_ACTION, CFG_DEFAULT_FN_ACTION},
         .language = CFG_DEFAULT_LANGUAGE,
@@ -354,6 +355,11 @@ void CFG_init(FontLoad_callback_t cb, ColorSet_callback_t ccb)
             if (sscanf(line, "ledThemeSync=%i", &temp_value) == 1)
             {
                 settings.ledThemeSync = (bool)temp_value;
+                continue;
+            }
+            if (sscanf(line, "debugLogging=%i", &temp_value) == 1)
+            {
+                settings.debugLogging = (bool)temp_value;
                 continue;
             }
             if (strncmp(line, "fn1action=", 10) == 0)
@@ -1113,6 +1119,19 @@ void CFG_setShowQuickswitcherUI(bool on)
     CFG_sync();
 }
 
+bool CFG_getDebugLogging(void)
+{
+    return settings.debugLogging;
+}
+
+void CFG_setDebugLogging(bool on)
+{
+    settings.debugLogging = on;
+    // Synced immediately: MinUI.pak reads minuisettings.txt at boot, and a
+    // crash is exactly the case where the setting must already be on disk.
+    CFG_sync();
+}
+
 bool CFG_getWifiDiagnostics(void)
 {
     return settings.wifiDiagnostics;
@@ -1594,6 +1613,10 @@ void CFG_get(const char *key, char *value)
     {
         sprintf(value, "%i", (int)(CFG_getWifiDiagnostics()));
     }
+    else if (strcmp(key, "debugLogging") == 0)
+    {
+        sprintf(value, "%i", (int)(CFG_getDebugLogging()));
+    }
     else if (strcmp(key, "bluetooth") == 0)
     {
         sprintf(value, "%i", (int)(CFG_getBluetooth()));
@@ -1759,6 +1782,7 @@ void CFG_sync(void)
     fprintf(file, "useExtractedFileName=%i\n", settings.useExtractedFileName);
     fprintf(file, "muteLeds=%i\n", settings.muteLeds);
     fprintf(file, "ledThemeSync=%i\n", settings.ledThemeSync);
+    fprintf(file, "debugLogging=%i\n", settings.debugLogging);
     fprintf(file, "fn1action=%s\n", settings.fnAction[0]);
     fprintf(file, "fn2action=%s\n", settings.fnAction[1]);
     fprintf(file, "fn3action=%s\n", settings.fnAction[2]);
