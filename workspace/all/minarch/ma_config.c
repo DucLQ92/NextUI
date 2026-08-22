@@ -533,12 +533,13 @@ void Config_load(void) {
 	char device_system_path[MAX_PATH] = {0};
 	if (config.device_tag) sprintf(device_system_path, SYSTEM_PATH "/system-%s.cfg", config.device_tag);
 	
+	// the device file layers on top of the shared one, it does not replace it
+	config.system_cfg = exists(system_path) ? allocFile(system_path) : NULL;
+	config.system_device_cfg = NULL;
 	if (config.device_tag && exists(device_system_path)) {
-		LOG_info("usng device_system_path: %s\n", device_system_path);
-		config.system_cfg = allocFile(device_system_path);
+		LOG_info("using device_system_path: %s\n", device_system_path);
+		config.system_device_cfg = allocFile(device_system_path);
 	}
-	else if (exists(system_path)) config.system_cfg = allocFile(system_path);
-	else config.system_cfg = NULL;
 	
 	// LOG_info("config.system_cfg: %s\n", config.system_cfg);
 	
@@ -556,12 +557,13 @@ void Config_load(void) {
 		strcpy(tmp,filename);
 	}
 	
+	// same here: default-<device>.cfg is a delta on top of default.cfg, not a replacement
+	config.default_cfg = exists(default_path) ? allocFile(default_path) : NULL;
+	config.default_device_cfg = NULL;
 	if (config.device_tag && exists(device_default_path)) {
-		LOG_info("usng device_default_path: %s\n", device_default_path);
-		config.default_cfg = allocFile(device_default_path);
+		LOG_info("using device_default_path: %s\n", device_default_path);
+		config.default_device_cfg = allocFile(device_default_path);
 	}
-	else if (exists(default_path)) config.default_cfg = allocFile(default_path);
-	else config.default_cfg = NULL;
 	
 	// LOG_info("config.default_cfg: %s\n", config.default_cfg);
 	
@@ -581,16 +583,21 @@ void Config_load(void) {
 }
 void Config_free(void) {
 	if (config.system_cfg) free(config.system_cfg);
+	if (config.system_device_cfg) free(config.system_device_cfg);
 	if (config.default_cfg) free(config.default_cfg);
+	if (config.default_device_cfg) free(config.default_device_cfg);
 	if (config.user_cfg) free(config.user_cfg);
 }
 void Config_readOptions(void) {
 	Config_readOptionsString(config.system_cfg);
+	Config_readOptionsString(config.system_device_cfg);
 	Config_readOptionsString(config.default_cfg);
+	Config_readOptionsString(config.default_device_cfg);
 	Config_readOptionsString(config.user_cfg);
 }
 void Config_readControls(void) {
 	Config_readControlsString(config.default_cfg);
+	Config_readControlsString(config.default_device_cfg);
 	Config_readControlsString(config.user_cfg);
 }
 void Config_write(int override) {
