@@ -5,7 +5,7 @@ void Core_open(const char* core_path, const char* tag_name);
 void Core_init(void);
 void Core_applyCheats(struct Cheats *cheats);
 int  Core_updateAVInfo(void);
-void Core_load(void);
+int Core_load(void); // 0 if the core rejected the file, in which case the caller must not run it
 void Core_reset(void);
 void Core_unload(void);
 void Core_quit(void);

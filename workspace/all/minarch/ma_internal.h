@@ -15,6 +15,7 @@
 
 struct Core {
 	int initialized;
+	int game_loaded; // retro_load_game returned true; nothing below may be trusted without it
 	int need_fullpath;
 
 	const char tag[8]; // eg. GBC

@@ -195,8 +195,8 @@ int main(int argc , char* argv[]) {
 	// mixing static and loaded data is messy
 	// why not move to Core_init()?
 	Menu_setCoreVersionDesc(core.version);
-	Core_load();
-	
+	if (!Core_load()) goto finish; // wrong system, unsupported container, bad dump
+
 	Input_init(NULL);
 	Config_readOptions(); // but others load and report options later (eg. nes)
 	Config_readControls(); // restore controls (after the core has reported its defaults)

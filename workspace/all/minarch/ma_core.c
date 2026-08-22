@@ -129,14 +129,22 @@ int Core_updateAVInfo(void) {
 	return changed;
 }
 
-void Core_load(void) {
+int Core_load(void) {
 	LOG_info("Core_load\n");
 	struct retro_game_info game_info;
 	game_info.path = game.tmp_path[0]?game.tmp_path:game.path;
 	game_info.data = game.data;
 	game_info.size = game.size;
 	LOG_info("game path: %s (%i)\n", game_info.path, game.size);
-	core.load_game(&game_info);
+	if (!core.load_game(&game_info)) {
+		// The core refused the file: wrong system for this pak, a container it
+		// doesn't handle (eg. .ecm), or a bad dump. Everything below assumes a
+		// loaded game, and retro_run() on an empty core either segfaults or
+		// executes garbage until the device has to be power cycled, so stop here.
+		LOG_error("core rejected %s\n", game_info.path);
+		return 0;
+	}
+	core.game_loaded = 1;
 
 	if (Cheats_load())
 		Core_applyCheats(&cheatcodes);
@@ -146,6 +154,7 @@ void Core_load(void) {
 	// NOTE: must be called after core.load_game!
 	core.set_controller_port_device(0, RETRO_DEVICE_JOYPAD); // set a default, may update after loading configs
 	Core_updateAVInfo();
+	return 1;
 }
 void Core_reset(void) {
 	core.reset();
@@ -159,9 +168,14 @@ void Core_unload(void) {
 }
 void Core_quit(void) {
 	if (core.initialized) {
-		SRAM_write();
+		// Only touch saves when a game actually loaded. After a rejected file the
+		// core's memory regions are meaningless and writing them back would stamp
+		// junk over a .sav.
+		if (core.game_loaded) {
+			SRAM_write();
+			RTC_write();
+		}
 		Cheats_free();
-		RTC_write();
 		core.unload_game();
 		core.deinit();
 		core.initialized = 0;
