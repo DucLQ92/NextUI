@@ -84,6 +84,32 @@ to
 
 	bind More Sun = NONE:L3
 
+# Config layers and device overrides
+
+Your "default.cfg" isn't the only file minarch reads. Options are applied in five passes, and each pass overwrites whatever the passes before it set:
+
+	1. /.system/[platform]/system.cfg
+	2. /.system/[platform]/system-[DEVICE].cfg
+	3. [your pak]/default.cfg
+	4. [your pak]/default-[DEVICE].cfg
+	5. /.userdata/[platform]/[TAG]-[core]/minarch.cfg
+	   (or minarch-[DEVICE].cfg when the platform exports one)
+
+So the shared system defaults come first, your pak's preset sits on top of those, and whatever the player saved from the in-game menu always wins. Pass 5 is the only one that isn't cumulative: if the player saved a per-game config it lives beside the console one as "[rom name].cfg" and is used *instead of* "minarch.cfg", not on top of it. Passes 2 and 4 are only read when the platform exports a `DEVICE` envar, and they *layer on top of* the file above them rather than replacing it. A "default-brick.cfg" only needs the handful of lines that actually differ on that device.
+
+Button bindings work almost the same way, except system.cfg is skipped entirely — only passes 3, 4 and 5 are read. The list of bindable control names is taken from "default.cfg" alone, so a device file can change the mapping of a binding but can't introduce one that "default.cfg" doesn't already declare.
+
+Keep in mind which devices a platform actually exports, or your override will sit there doing nothing. As of this writing "tg5040" exports "brick", "brickpro" and "smartpro", "tg5050" exports "smartpros", and the desktop build exports nothing at all. Note that "brickpro" does not read "default-brick.cfg" — the match is exact.
+
+# A word about the config parser
+
+The parser is deliberately dumb, which is worth knowing before you hand-edit a cfg:
+
+* Separators are exact. A setting has to be written `key = value`, with single spaces around the equals sign. `key=value` is not recognized.
+* Comments aren't a feature, they just happen to work. Nothing strips `#` lines, so a `#` line is only harmless as long as it contains no ` = ` — otherwise it gets read as a real setting. The presets in the base and extras paks are annotated on exactly that basis: keep ` = ` out of your notes and you're fine.
+* A leading `-` sets an option and hides it from the in-game menu, but the parser only looks at the character in front of the key, wherever in the file it appears. Writing something like `non-minarch_cpu_speed` in a note will silently lock `minarch_cpu_speed`.
+* Within a single file the first match wins, so a duplicated key later in the file is ignored.
+
 # Brightness and Volume
 
 Some binaries insist on resetting brightness (eg. DinguxCommander on the 40xxH stock firmware) or volume (eg. ppssppSDL everywhere) on every launch. To keep this in sync with NextUI's global settings there's syncsettings.elf. It waits one second then restores NextUI's current brightness and volume settings. In most cases you can just launch it as a daemon before launching the binary:

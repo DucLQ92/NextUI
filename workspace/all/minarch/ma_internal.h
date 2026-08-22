@@ -180,7 +180,9 @@ typedef struct OptionList {
 
 struct Config {
 	char* system_cfg;
+	char* system_device_cfg;
 	char* default_cfg;
+	char* default_device_cfg;
 	char* user_cfg;
 	char* shaders_preset;
 	char* device_tag;
